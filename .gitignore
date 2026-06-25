@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# rendered output is never committed
+*.pdf
+examples/**/out/
+
+# user CV data must never be committed
+canon.local.*
+*.canon.local.yaml
+.security/denylist.local.txt
