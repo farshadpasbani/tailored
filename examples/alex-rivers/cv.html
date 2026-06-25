@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8" />
+<title>Alex Rivers - CV</title>
+<style>
+  @page { size: A4; margin: 10mm 14mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.28;
+    color: #2c3640;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  a { color: #0e7490; text-decoration: none; }
+  header { margin-bottom: 6px; }
+  .name { font-size: 25pt; font-weight: 700; color: #16212b; line-height: 1.05; }
+  .role { font-size: 11.5pt; font-weight: 600; color: #0e7490; margin-top: 2px; }
+  .contact { font-size: 8.8pt; color: #5a6571; margin-top: 4px; }
+  .contact span { white-space: nowrap; }
+  .sep { color: #c2cad1; padding: 0 6px; }
+  h2 {
+    font-size: 9.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 1.4px;
+    color: #16212b; border-bottom: 1px solid #dde3e8;
+    padding-bottom: 3px; margin: 10px 0 5px;
+  }
+  p { margin: 0 0 6px; }
+  .summary { color: #2c3640; }
+  .skill { display: flex; margin-bottom: 2px; }
+  .skill .k { flex: 0 0 150px; font-weight: 700; color: #16212b; }
+  .skill .v { flex: 1; color: #2c3640; }
+  .entry { margin-bottom: 7px; }
+  .eh { display: flex; justify-content: space-between; align-items: baseline; }
+  .title { font-weight: 700; color: #16212b; }
+  .tag { font-style: italic; color: #5a6571; }
+  .meta { color: #5a6571; font-size: 8.8pt; white-space: nowrap; padding-left: 12px; }
+  ul { margin: 2px 0 0; padding-left: 16px; }
+  li { margin-bottom: 1px; }
+  .links { font-size: 8.6pt; margin-top: 2px; }
+  .links a { margin-right: 12px; }
+  .edu { break-inside: avoid; margin-bottom: 5px; }
+  .two { display: flex; justify-content: space-between; align-items: baseline; }
+  .list-plain { list-style: none; padding-left: 0; margin: 0; }
+  .list-plain li { margin-bottom: 3px; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="name">Alex Rivers</div>
+    <div class="role">AI Engineer</div>
+    <div class="contact">
+      <span>Manchester, UK</span><span class="sep">/</span>
+      <span><a href="mailto:alex.rivers@example.com">alex.rivers@example.com</a></span>
+    </div>
+    <div class="contact">
+      <span><a href="https://github.com/alexrivers">github.com/alexrivers</a></span><span class="sep">/</span>
+      <span><a href="https://alexrivers.example.com">alexrivers.example.com</a></span>
+    </div>
+  </header>
+
+  <section>
+    <h2>Summary</h2>
+    <p class="summary">
+      AI engineer with seven years building data-intensive products, the last three focused on
+      shipping language-model features behind deterministic guardrails. I like owning a feature end
+      to end, from the evaluation harness through to the deployment, and I am drawn to problems where
+      a stochastic model has to behave predictably enough to trust.
+    </p>
+  </section>
+
+  <section>
+    <h2>Technical Skills</h2>
+    <div class="skill"><div class="k">Languages</div><div class="v">TypeScript, Python, Go, SQL</div></div>
+    <div class="skill"><div class="k">AI and ML</div><div class="v">LLM orchestration, retrieval-augmented generation, evaluation harnesses, prompt design</div></div>
+    <div class="skill"><div class="k">Backend</div><div class="v">Node.js, FastAPI, PostgreSQL, Redis, event-driven services</div></div>
+    <div class="skill"><div class="k">Platform</div><div class="v">Docker, Kubernetes, GitHub Actions, Terraform, AWS</div></div>
+    <div class="skill"><div class="k">Practice</div><div class="v">Test-driven development, observability, design reviews, mentoring</div></div>
+  </section>
+
+  <section>
+    <h2>Selected Projects</h2>
+    <div class="entry">
+      <div class="title">Gatehouse: a deterministic policy layer that wraps a stochastic model in testable gates</div>
+      <ul>
+        <li>Designed a gate pipeline so model output is checked against schema, style, and safety rules before it ever reaches a user, turning flaky behaviour into a build-time failure.</li>
+        <li>Cut review time for generated documents by roughly two thirds by making the unhappy paths fail loudly in continuous integration rather than silently in production.</li>
+      </ul>
+      <div class="links"><a href="https://github.com/alexrivers/gatehouse">github.com/alexrivers/gatehouse</a></div>
+    </div>
+    <div class="entry">
+      <div class="title">Lighthouse: an evaluation harness that scores model changes against a frozen rubric</div>
+      <ul>
+        <li>Built a reproducible scoring loop so any prompt or model swap is measured against the same fixtures, giving the team a number to argue about instead of a vibe.</li>
+        <li>Wired the harness into the release gate so a regression in answer quality blocks the merge automatically.</li>
+      </ul>
+    </div>
+    <div class="entry">
+      <div class="title">Ferry: a low-latency retrieval service for grounding answers in private documents</div>
+      <ul>
+        <li>Implemented a hybrid retrieval path combining keyword and vector search, tuned so the median grounded answer returns in well under a second.</li>
+        <li>Added per-tenant isolation so one customer's documents can never surface in another customer's results.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Experience</h2>
+    <div class="entry">
+      <div class="eh">
+        <div><span class="title">Senior AI Engineer</span>, Meridian Labs</div>
+        <div class="meta">Manchester, UK · 2022–Present</div>
+      </div>
+      <ul>
+        <li>Lead the language-model platform team, owning the guardrail layer that every customer-facing feature ships behind.</li>
+        <li>Introduced an evaluation-first workflow so model changes are judged on measured quality rather than opinion, which steadied a previously volatile release cadence.</li>
+        <li>Mentor three engineers and run the weekly design review, raising the bar on testing and observability across the group.</li>
+      </ul>
+    </div>
+    <div class="entry">
+      <div class="eh">
+        <div><span class="title">Software Engineer</span>, Northbridge Analytics</div>
+        <div class="meta">Leeds, UK · 2017–2022</div>
+      </div>
+      <ul>
+        <li>Built and operated event-driven data services handling millions of records a day, with a strong focus on correctness and recovery.</li>
+        <li>Migrated a fragile monolith to well-bounded services, paying down years of technical debt without a customer-visible outage.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Education</h2>
+    <div class="edu">
+      <div class="two">
+        <div><span class="title">BSc Computer Science</span>, University of Manchester</div>
+        <div class="meta">2017</div>
+      </div>
+      <div class="tag">First-class honours</div>
+    </div>
+    <div class="edu">
+      <div class="two">
+        <div><span class="title">Foundation Certificate in Mathematics</span>, Manchester College</div>
+        <div class="meta">2013</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Publications &amp; Certifications</h2>
+    <ul class="list-plain">
+      <li>Rivers, A. (2024). Deterministic gates around stochastic models. Internal engineering journal.</li>
+      <li>AWS Certified Solutions Architect, Associate</li>
+      <li>Certified Kubernetes Application Developer</li>
+    </ul>
+  </section>
+</body>
+</html>
