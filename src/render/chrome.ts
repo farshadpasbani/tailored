@@ -1,5 +1,7 @@
 import { existsSync } from "node:fs";
 import { spawn } from "node:child_process";
+import { resolve as resolvePath } from "node:path";
+
 export interface FindChromeOpts { env?: Record<string, string | undefined>; platform?: NodeJS.Platform; exists?: (p: string) => boolean; }
 const CANDIDATES: Partial<Record<NodeJS.Platform, string[]>> = {
   darwin: ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Chromium.app/Contents/MacOS/Chromium"],
@@ -12,13 +14,29 @@ export function findChrome(opts: FindChromeOpts = {}): string | null {
   for (const c of CANDIDATES[opts.platform ?? process.platform] ?? []) if (exists(c)) return c;
   return null;
 }
-export async function renderToPdf(htmlPath: string, pdfPath: string, opts: FindChromeOpts = {}): Promise<void> {
+
+export interface ChromeArgsOpts { ci?: boolean; extraArgs?: string[]; }
+// CI runners and containers cannot initialise Chrome's setuid sandbox; it aborts in
+// ZygoteHostImpl::Init(). We disable the sandbox ONLY there, keeping it on for normal
+// local use where the input is trusted local HTML anyway.
+export function buildChromeArgs(absHtmlPath: string, pdfPath: string, opts: ChromeArgsOpts = {}): string[] {
+  const args = ["--headless=new", "--disable-gpu", "--no-pdf-header-footer"];
+  if (opts.ci) args.push("--no-sandbox", "--disable-dev-shm-usage");
+  if (opts.extraArgs?.length) args.push(...opts.extraArgs);
+  args.push(`--print-to-pdf=${pdfPath}`, `file://${absHtmlPath}`);
+  return args;
+}
+
+export interface RenderOpts extends FindChromeOpts, ChromeArgsOpts {}
+export async function renderToPdf(htmlPath: string, pdfPath: string, opts: RenderOpts = {}): Promise<void> {
   const bin = findChrome(opts);
   if (!bin) throw new Error("No Chrome/Chromium found. Set CHROME_BIN or install Google Chrome.");
-  const abs = (await import("node:path")).resolve(htmlPath);
-  await new Promise<void>((resolve, reject) => {
-    const p = spawn(bin, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${pdfPath}`, `file://${abs}`]);
+  const abs = resolvePath(htmlPath);
+  const ci = opts.ci ?? Boolean((opts.env ?? process.env).CI);
+  const args = buildChromeArgs(abs, pdfPath, { ci, extraArgs: opts.extraArgs });
+  await new Promise<void>((done, reject) => {
+    const p = spawn(bin, args);
     let err = ""; p.stderr.on("data", (d) => (err += d));
-    p.on("error", reject); p.on("close", (c) => (c === 0 ? resolve() : reject(new Error(err || `chrome exited ${c}`))));
+    p.on("error", reject); p.on("close", (c) => (c === 0 ? done() : reject(new Error(err || `chrome exited ${c}`))));
   });
 }

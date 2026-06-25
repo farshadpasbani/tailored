@@ -1,5 +1,24 @@
 import { describe, it, expect } from "vitest";
-import { findChrome } from "./chrome.js";
+import { findChrome, buildChromeArgs } from "./chrome.js";
+describe("buildChromeArgs", () => {
+  it("keeps the sandbox on by default (local use)", () => {
+    const a = buildChromeArgs("/abs/cv.html", "/out/cv.pdf");
+    expect(a).not.toContain("--no-sandbox");
+    expect(a).toContain("--headless=new");
+    expect(a[a.length - 2]).toBe("--print-to-pdf=/out/cv.pdf");
+    expect(a[a.length - 1]).toBe("file:///abs/cv.html");
+  });
+  it("disables the sandbox under CI (the runner cannot init it)", () => {
+    const a = buildChromeArgs("/abs/cv.html", "/out/cv.pdf", { ci: true });
+    expect(a).toContain("--no-sandbox");
+    expect(a).toContain("--disable-dev-shm-usage");
+  });
+  it("appends extraArgs before the print/file flags", () => {
+    const a = buildChromeArgs("/a.html", "/o.pdf", { extraArgs: ["--window-size=1200,800"] });
+    expect(a).toContain("--window-size=1200,800");
+    expect(a[a.length - 1]).toBe("file:///a.html");
+  });
+});
 describe("findChrome", () => {
   it("prefers CHROME_BIN when it exists", () => {
     expect(findChrome({ env: { CHROME_BIN: "/custom/chrome" }, exists: (p) => p === "/custom/chrome" })).toBe("/custom/chrome");
