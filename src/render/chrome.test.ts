@@ -9,5 +9,6 @@ describe("findChrome", () => {
     expect(findChrome({ env: {}, platform: "darwin", exists: (p) => p === mac })).toBe(mac);
   });
   it("finds chromium on linux", () => { expect(findChrome({ env: {}, platform: "linux", exists: (p) => p === "/usr/bin/chromium" })).toBe("/usr/bin/chromium"); });
+  it("finds the snap chromium shim on linux", () => { expect(findChrome({ env: {}, platform: "linux", exists: (p) => p === "/snap/bin/chromium" })).toBe("/snap/bin/chromium"); });
   it("returns null when nothing is found", () => { expect(findChrome({ env: {}, platform: "linux", exists: () => false })).toBeNull(); });
 });

@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 export interface FindChromeOpts { env?: Record<string, string | undefined>; platform?: NodeJS.Platform; exists?: (p: string) => boolean; }
 const CANDIDATES: Partial<Record<NodeJS.Platform, string[]>> = {
   darwin: ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Chromium.app/Contents/MacOS/Chromium"],
-  linux: ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser"],
+  linux: ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser", "/snap/bin/chromium"],
   win32: ["C:/Program Files/Google/Chrome/Application/chrome.exe"],
 };
 export function findChrome(opts: FindChromeOpts = {}): string | null {
