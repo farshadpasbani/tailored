@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { loadCanon } from "./canon/load.js";
 import { lintAiTells } from "./gates/aiTell.js";
@@ -35,7 +36,10 @@ program
   .action((files: string[]) => {
     let total = 0;
     for (const f of files) {
-      const issues = lintAiTells(readFileSync(f, "utf8"));
+      let content: string;
+      try { content = readFileSync(f, "utf8"); }
+      catch (e) { fail(`cannot read ${f}: ${(e as Error).message}`); }
+      const issues = lintAiTells(content);
       for (const i of issues) console.error(`${f}:${i.line}: ${i.rule} (${JSON.stringify(i.match)})`);
       total += issues.length;
     }
@@ -50,6 +54,7 @@ program
   .option("--max <n>", "maximum allowed pages", "1")
   .action(async (pdf: string, opts: { max: string }) => {
     const max = Number(opts.max);
+    if (!Number.isInteger(max) || max < 1) fail(`--max must be a positive integer, got ${JSON.stringify(opts.max)}`);
     let res;
     try { res = await assertPageFit(pdf, max); }
     catch (e) { fail((e as Error).message); }
@@ -86,14 +91,17 @@ program
   .command("smoke")
   .description("render the alex-rivers example and run the page-fit and ai-tell gates")
   .action(async () => {
-    const html = "examples/alex-rivers/cv.html";
+    // Resolve the bundled example relative to this file (dist/cli.js -> ../examples/...)
+    // so `tailored smoke` works from any working directory, including a global install.
+    const html = fileURLToPath(new URL("../examples/alex-rivers/cv.html", import.meta.url));
     const pdf = join(tmpdir(), `tailored-smoke-${process.pid}.pdf`);
     const tells = lintAiTells(readFileSync(html, "utf8"));
     if (tells.length > 0) fail(`${html} has ${tells.length} AI tell(s)`);
     try { await renderToPdf(html, pdf); }
     catch (e) { fail((e as Error).message); }
     let res;
-    try { res = await assertPageFit(pdf, 2); }
+    // The Alex Rivers CV is one page by design; the smoke gate enforces that.
+    try { res = await assertPageFit(pdf, 1); }
     catch (e) { fail((e as Error).message); }
     if (!res.ok) fail(`${html} rendered to ${res.pages} page(s), over the limit of ${res.max}`);
     console.log(`PASS: smoke rendered ${html} to ${res.pages} page(s) (max ${res.max}), clean of AI tells`);
