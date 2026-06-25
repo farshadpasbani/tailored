@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8" />
+<title>Alex Rivers - Cover Note</title>
+<style>
+  @page { size: A4; margin: 10mm 14mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.32;
+    color: #2c3640;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  a { color: #0e7490; text-decoration: none; }
+  header { margin-bottom: 9px; }
+  .name { font-size: 25pt; font-weight: 700; color: #16212b; line-height: 1.05; }
+  .role { font-size: 11.5pt; font-weight: 600; color: #0e7490; margin-top: 2px; }
+  .contact { font-size: 8.8pt; color: #5a6571; margin-top: 4px; }
+  .contact span { white-space: nowrap; }
+  .sep { color: #c2cad1; padding: 0 6px; }
+  h1 {
+    font-size: 13pt; font-weight: 700; color: #16212b;
+    border-bottom: 1px solid #dde3e8; padding-bottom: 4px; margin: 14px 0 10px;
+  }
+  p { margin: 0 0 9px; }
+  .lead { font-weight: 700; color: #16212b; }
+  .signoff { margin-top: 14px; }
+  .signoff .me { font-weight: 700; color: #16212b; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="name">Alex Rivers</div>
+    <div class="role">AI Engineer</div>
+    <div class="contact">
+      <span>Manchester, UK</span><span class="sep">/</span>
+      <span><a href="mailto:alex.rivers@example.com">alex.rivers@example.com</a></span><span class="sep">/</span>
+      <span><a href="https://github.com/alexrivers">github.com/alexrivers</a></span>
+    </div>
+  </header>
+
+  <h1>AI Engineer, Trustworthy Systems</h1>
+
+  <p>Dear Halyard team,</p>
+
+  <p>
+    Your posting reads like a description of how I already work. You want someone who treats a
+    language model as a component to be constrained and measured rather than a magic box to be
+    trusted on faith, and that posture is the through line of everything I have built for the last
+    three years.
+  </p>
+
+  <p>
+    <span class="lead">On guardrails.</span> At Meridian Labs I lead the platform team that owns the
+    layer every customer-facing feature ships behind. In the open I built Gatehouse, a deterministic
+    policy layer that checks model output against schema, style, and safety rules before it reaches a
+    user, which turns flaky behaviour into a build-time failure rather than a production incident.
+  </p>
+
+  <p>
+    <span class="lead">On measurement.</span> I am a strong believer that a model change should be
+    judged on a number, not a hunch. My Lighthouse harness scores every prompt or model swap against
+    the same frozen fixtures and blocks the merge when answer quality regresses, so the team argues
+    about evidence instead of vibes.
+  </p>
+
+  <p>
+    <span class="lead">On the unhappy path.</span> Your note about making failures loud in continuous
+    integration rather than quiet in production is exactly the discipline I bring. I design the empty,
+    malformed, and over-limit cases first, because those are the inputs that decide whether a system
+    is trustworthy.
+  </p>
+
+  <p>
+    I would welcome the chance to talk about how I would help Halyard ship language-model features
+    that behave. My public work is the clearest evidence of how I think, and I am happy to walk you
+    through any of it.
+  </p>
+
+  <div class="signoff">
+    <p>Kind regards,</p>
+    <p class="me">Alex Rivers</p>
+  </div>
+</body>
+</html>

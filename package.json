@@ -1,0 +1,21 @@
+{
+  "name": "tailored",
+  "version": "0.1.0",
+  "description": "Agentic CV tailoring with deterministic gates. The model proposes; the gates decide.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Farshad Pasbani",
+  "bin": { "tailored": "dist/cli.js" },
+  "files": ["dist", "skill", "examples", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "lint:self": "node dist/cli.js lint $(git ls-files 'examples/**/*.html' 'README.md' 'skill/*.md' 'skill/**/*.md')",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": { "commander": "^12.1.0", "js-yaml": "^4.1.0", "zod": "^3.23.8" },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9", "@types/node": "^20.14.0",
+    "typescript": "^5.5.0", "vitest": "^2.0.0"
+  }
+}

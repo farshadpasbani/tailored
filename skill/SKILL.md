@@ -1,0 +1,115 @@
+---
+name: tailored
+description: >
+  Use to tailor a job-application pack (CV and cover note) for a candidate to a
+  specific role or firm. Triggers whenever a user pastes or links a job
+  description and asks to tailor a CV, make a CV for a role, write a cover note
+  for a vacancy, or build a job-application pack. Drives the whole pipeline: read
+  the job description, load the candidate's canonical facts and IP boundaries from
+  their canon.yaml, grill to fill role-specific gaps, author house-style HTML,
+  render to PDF, run the deterministic gates, verify by eye, and deliver.
+---
+
+# tailored
+
+Tailor a CV and cover note from a candidate's structured facts to a specific role.
+The model proposes the prose; the gates decide what ships. The candidate's facts
+live in a `canon.yaml` that stays on their machine and is never committed.
+
+## What this skill guarantees
+
+A stochastic language model writes the prose, but four deterministic gates stand
+between that prose and the delivered document. Three pass or fail with an exit
+code; one is an honest human-in-the-loop check.
+
+| Gate | What it checks | How |
+| --- | --- | --- |
+| schema | the canon is well formed | `tailored validate canon.yaml` (deterministic) |
+| ai-tell | no em dashes, double-hyphen connectors, or HTML em-dash entities | `tailored lint *.html` (deterministic) |
+| page-fit | the document fits its page budget | `tailored page-fit out.pdf --max 1` (deterministic) |
+| ip-guard | no protected topic leaks into the output | `tailored ip-guard out.html --canon canon.yaml` (deterministic) |
+| visual | the document actually looks right | read the rasterised preview yourself (agent in the loop) |
+
+Be honest about that last row. The visual judgement is not automated. A render can
+pass page-fit and still look wrong: a widow, a cramped header, a section that
+breaks badly. The agent or a human reads the preview PNG and signs it off. The
+other four gates are automatic and gate the pipeline; this one is a deliberate
+checkpoint.
+
+## Prerequisites
+
+- The `tailored` CLI on the path (`npm i && npm run build`, then run via
+  `node dist/cli.js ...` or install the package and use the `tailored` bin).
+- Headless Chrome or Chromium for rendering. Set `CHROME_BIN` if it is not at a
+  standard path.
+- poppler for page counting and preview (`pdfinfo`, `pdftoppm`).
+
+## The candidate's canon
+
+The candidate keeps a `canon.yaml`: their single validated source of truth. It
+holds identity, summary, skills, projects, experience, education, certifications,
+publications, a `claims` block (what they can and cannot speak to), and a
+`protectedTopics` list (terms that must never appear in any output, such as a
+confidential project name). This file is private. Keep it gitignored. Nothing in
+it leaves the user's machine.
+
+Validate it before doing anything else:
+
+```sh
+tailored validate canon.yaml
+```
+
+See `examples/alex-rivers/canon.yaml` for the shape, populated with a fictional
+candidate.
+
+## The pipeline
+
+1. **Intake the job description.** Read the role the user pasted or linked. Pull
+   out the must-haves, the nice-to-haves, and the language the employer uses.
+
+2. **Load the canon.** Run `tailored validate canon.yaml`. Read the candidate's
+   facts, their `claims`, and their `protectedTopics`. Everything you write must
+   trace to a fact in the canon. Do not invent employers, dates, metrics, or
+   results.
+
+3. **Grill the gaps.** Where the role needs something the canon does not yet
+   state, ask the user rather than guessing. Fill the gap in the canon, do not
+   fabricate it in the document.
+
+4. **Author the documents.** Write `cv.html` and `cover.html` in the house style
+   (see `references/house-style.md`). Match the role's language to the
+   candidate's real evidence. British spelling. No AI tells. CV to one page.
+
+5. **Run the gates.**
+
+   ```sh
+   tailored render cv.html out/cv.pdf
+   tailored render cover.html out/cover.pdf
+   tailored lint cv.html cover.html
+   tailored page-fit out/cv.pdf --max 1
+   tailored page-fit out/cover.pdf --max 1
+   tailored ip-guard cv.html --canon canon.yaml
+   tailored ip-guard cover.html --canon canon.yaml
+   ```
+
+   Any non-zero exit stops the pipeline. Fix the document and re-run. Do not edit
+   the gate to pass; the gate is the spec.
+
+6. **Verify by eye.** Rasterise and look:
+
+   ```sh
+   pdftoppm -png -r 150 -f 1 -l 1 out/cv.pdf out/cv-preview
+   ```
+
+   Read the preview. Check the header, the spacing, the line breaks, and whether
+   the tailoring actually lands. This is the human-in-the-loop gate.
+
+7. **Deliver.** Hand over the PDFs. The rendered output and the canon stay on the
+   user's machine.
+
+## Privacy
+
+The candidate's data never leaves their machine. The canon is gitignored. The
+gates run locally. The only thing this project ships publicly is the fictional
+Alex Rivers example, which exists so the pipeline can be demonstrated without a
+real person's facts.

@@ -1,0 +1,30 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install Chrome
+        id: setup-chrome
+        uses: browser-actions/setup-chrome@v1
+      - name: Install poppler
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npm run lint:self
+      # CHROME_BIN is set at step level: the `steps` context is not available
+      # in job-level env, so referencing chrome-path there would resolve to empty.
+      - run: node dist/cli.js smoke
+        env:
+          CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
