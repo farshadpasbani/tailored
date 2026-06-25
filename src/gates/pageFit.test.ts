@@ -7,4 +7,12 @@ describe("page-fit", () => {
     const fakeRun = async () => "Pages: 3";
     expect(await assertPageFit("x.pdf", 2, fakeRun)).toEqual({ ok: false, pages: 3, max: 2 });
   });
+  it("passes the assertion when under the max", async () => {
+    const fakeRun = async () => "Pages: 1";
+    expect(await assertPageFit("x.pdf", 2, fakeRun)).toEqual({ ok: true, pages: 1, max: 2 });
+  });
+  it("passes on the boundary (pages === max)", async () => {
+    const fakeRun = async () => "Pages: 2";
+    expect(await assertPageFit("x.pdf", 2, fakeRun)).toEqual({ ok: true, pages: 2, max: 2 });
+  });
 });
