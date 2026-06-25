@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "lint:self": "node dist/cli.js lint $(git ls-files '*.html' 'README.md' 'skill/**/*.md')",
+    "lint:self": "node dist/cli.js lint $(git ls-files 'examples/**/*.html' 'README.md' 'skill/*.md' 'skill/**/*.md')",
     "prepublishOnly": "npm run build"
   },
   "dependencies": { "commander": "^12.1.0", "js-yaml": "^4.1.0", "zod": "^3.23.8" },

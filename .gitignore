@@ -4,6 +4,7 @@ dist/
 
 # rendered output is never committed
 *.pdf
+out/
 examples/**/out/
 
 # user CV data must never be committed
