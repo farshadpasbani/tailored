@@ -5,8 +5,11 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { loadCanon } from "./canon/load.js";
+import { loadJd } from "./jd/load.js";
 import { lintAiTells } from "./gates/aiTell.js";
 import { assertPageFit } from "./gates/pageFit.js";
+import { extractPdfText } from "./gates/run.js";
+import { analyzeAts } from "./gates/ats.js";
 import { scanProtected } from "./gates/ipGuard.js";
 import { renderToPdf } from "./render/chrome.js";
 import { version } from "./index.js";
@@ -74,6 +77,35 @@ program
     for (const l of leaks) console.error(`${file}:${l.line}: leaked protected topic "${l.term}"`);
     if (leaks.length > 0) fail(`${leaks.length} protected-topic leak(s) in ${file}`);
     console.log(`PASS: ${file} leaks none of ${r.data.protectedTopics.length} protected topic(s)`);
+  });
+
+program
+  .command("ats")
+  .description("check a rendered CV PDF parses for ATS and covers a job's must-have keywords")
+  .argument("<pdf>", "path to the rendered CV PDF")
+  .requiredOption("--jd <jd>", "path to jd.yaml (role keywords)")
+  .option("--min <ratio>", "minimum must-have coverage to pass (0..1)", "0.8")
+  .action(async (pdf: string, opts: { jd: string; min: string }) => {
+    const min = Number(opts.min);
+    if (!(min >= 0 && min <= 1)) fail(`--min must be a number in [0,1], got ${JSON.stringify(opts.min)}`);
+    const jd = loadJd(opts.jd);
+    if (!jd.ok) fail(`invalid jd\n  ${jd.errors.join("\n  ")}`);
+    // Warn on orphan synonym keys (likely typos): a synonym for a term that is not gated does nothing.
+    for (const key of Object.keys(jd.data.synonyms)) {
+      if (![...jd.data.mustHave, ...jd.data.niceToHave].includes(key))
+        console.error(`WARN: synonym key "${key}" is not in mustHave/niceToHave`);
+    }
+    let text: string;
+    try { text = await extractPdfText(pdf); }
+    catch (e) { fail((e as Error).message); }
+    const r = analyzeAts(text, jd.data, min);
+    if (!r.parse.textLayer) console.error("  parse: no text layer (image-only PDF?)");
+    if (!r.parse.contact) console.error("  parse: no contact email found");
+    if (r.parse.headings < 3) console.error(`  parse: only ${r.parse.headings}/3 standard headings found`);
+    for (const m of r.must.missing) console.error(`  missing must-have: ${m}`);
+    const pct = Math.round(r.must.ratio * 100);
+    if (!r.ok) fail(`ats: ${r.parse.ok ? "parseable" : "not parseable"}, must-have coverage ${pct}% (${r.must.covered.length}/${jd.data.mustHave.length}), min ${Math.round(min * 100)}%`);
+    console.log(`PASS: ats - parseable, must-have coverage ${pct}% (${r.must.covered.length}/${jd.data.mustHave.length}); nice-to-have ${Math.round(r.nice.ratio * 100)}%`);
   });
 
 program
