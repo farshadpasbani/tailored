@@ -136,7 +136,15 @@ program
     try { res = await assertPageFit(pdf, 1); }
     catch (e) { fail((e as Error).message); }
     if (!res.ok) fail(`${html} rendered to ${res.pages} page(s), over the limit of ${res.max}`);
-    console.log(`PASS: smoke rendered ${html} to ${res.pages} page(s) (max ${res.max}), clean of AI tells`);
+    const jdPath = fileURLToPath(new URL("../examples/alex-rivers/jd.yaml", import.meta.url));
+    const jd = loadJd(jdPath);
+    if (!jd.ok) fail(`example jd invalid:\n  ${jd.errors.join("\n  ")}`);
+    let atsText: string;
+    try { atsText = await extractPdfText(pdf); }
+    catch (e) { fail((e as Error).message); }
+    const ats = analyzeAts(atsText, jd.data, 0.8);
+    if (!ats.ok) fail(`example CV fails ats: coverage ${Math.round(ats.must.ratio * 100)}%, missing ${ats.must.missing.join(", ")}`);
+    console.log(`PASS: smoke rendered ${html} to ${res.pages} page(s) (max ${res.max}), clean of AI tells, ats coverage ${Math.round(ats.must.ratio * 100)}%`);
   });
 
 program.parseAsync(process.argv);
