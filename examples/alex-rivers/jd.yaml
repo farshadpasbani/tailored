@@ -1,0 +1,16 @@
+role: AI Engineer, Trustworthy Systems
+company: Halyard
+mustHave:
+  - typescript
+  - python
+  - evaluation
+  - deterministic
+  - test-driven development
+niceToHave:
+  - retrieval-augmented generation
+  - kubernetes
+  - aws
+  - mentoring
+synonyms:
+  test-driven development: [TDD]
+  retrieval-augmented generation: [RAG]
