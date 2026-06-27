@@ -24,12 +24,18 @@ export function parseChecks(cvText: string) {
 
 export function keywordCoverage(cvText: string, terms: string[], synonyms: Record<string, string[]>) {
   const text = norm(cvText);
+  // Index the synonym map by normalised key so lookup is case/whitespace-insensitive.
+  const synByNorm = new Map<string, string[]>();
+  for (const [key, vals] of Object.entries(synonyms)) synByNorm.set(norm(key).trim(), vals);
+  // Dedupe terms by normalised form, keeping first-seen original spelling.
+  const seen = new Set<string>();
+  const uniqueTerms = terms.filter((t) => { const k = norm(t).trim(); return seen.has(k) ? false : (seen.add(k), true); });
   const covered: string[] = [], missing: string[] = [];
-  for (const term of terms) {
-    const variants = [term, ...(synonyms[term] ?? [])];
+  for (const term of uniqueTerms) {
+    const variants = [term, ...(synByNorm.get(norm(term).trim()) ?? [])];
     (variants.some((v) => present(text, v)) ? covered : missing).push(term);
   }
-  const ratio = terms.length === 0 ? 1 : covered.length / terms.length;
+  const ratio = uniqueTerms.length === 0 ? 1 : covered.length / uniqueTerms.length;
   return { covered, missing, ratio };
 }
 

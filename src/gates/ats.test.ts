@@ -38,6 +38,14 @@ describe("keywordCoverage", () => {
     const r = keywordCoverage("strong ML background", ["machine learning"], { "machine learning": ["ML"] });
     expect(r.covered).toEqual(["machine learning"]); expect(r.missing).toEqual([]);
   });
+  it("matches a synonym when the map key case differs from the term", () => {
+    const r = keywordCoverage("strong ML background", ["Machine Learning"], { "machine learning": ["ML"] });
+    expect(r.covered).toEqual(["Machine Learning"]); expect(r.missing).toEqual([]);
+  });
+  it("dedupes repeated terms (case-insensitively) before counting", () => {
+    const r = keywordCoverage("react only", ["react", "react"], {});
+    expect(r.ratio).toBe(1); expect(r.covered).toEqual(["react"]); expect(r.missing).toEqual([]);
+  });
   it("is word-boundary aware (no java inside javascript)", () => {
     expect(keywordCoverage("expert in javascript", ["java"], {}).missing).toEqual(["java"]);
   });
