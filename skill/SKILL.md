@@ -18,8 +18,8 @@ live in a `canon.yaml` that stays on their machine and is never committed.
 
 ## What this skill guarantees
 
-A stochastic language model writes the prose, but four deterministic gates stand
-between that prose and the delivered document. Three pass or fail with an exit
+A stochastic language model writes the prose, but five deterministic gates stand
+between that prose and the delivered document. Four pass or fail with an exit
 code; one is an honest human-in-the-loop check.
 
 | Gate | What it checks | How |
@@ -27,6 +27,7 @@ code; one is an honest human-in-the-loop check.
 | schema | the canon is well formed | `tailored validate canon.yaml` (deterministic) |
 | ai-tell | no em dashes, double-hyphen connectors, or HTML em-dash entities | `tailored lint *.html` (deterministic) |
 | page-fit | the document fits its page budget | `tailored page-fit out.pdf --max 1` (deterministic) |
+| ats | the CV parses for ATS and covers the job's must-have keywords | `tailored ats out/cv.pdf --jd jd.yaml` (deterministic) |
 | ip-guard | no protected topic leaks into the output | `tailored ip-guard out.html --canon canon.yaml` (deterministic) |
 | visual | the document actually looks right | read the rasterised preview yourself (agent in the loop) |
 
@@ -66,6 +67,23 @@ candidate.
 
 1. **Intake the job description.** Read the role the user pasted or linked. Pull
    out the must-haves, the nice-to-haves, and the language the employer uses.
+   Write the keywords to an inspectable `jd.yaml` (`role`, `mustHave`,
+   `niceToHave`, optional `synonyms`); the model proposes the set, the user can
+   correct it, and the ats gate decides. A keyword the CV is missing is either
+   real canon evidence to surface in the document or a genuine fit gap to raise
+   with the candidate, never a licence to fabricate a skill. See
+   `examples/alex-rivers/jd.yaml` for the shape.
+
+   Also save the full posting text verbatim to `job-description.md` and render it
+   to an archival PDF, so the delivered folder is self-contained (you can always
+   see what was applied to). The CLI cannot fetch a login-walled link itself, so
+   capture the text yourself, then render:
+
+   ```sh
+   tailored jd-pdf job-description.md out/job-description.pdf \
+     --title "Role title" --company "Company" --location "City, UK" \
+     --source "https://..." --date 2026-06-27
+   ```
 
 2. **Load the canon.** Run `tailored validate canon.yaml`. Read the candidate's
    facts, their `claims`, and their `protectedTopics`. Everything you write must
@@ -88,6 +106,7 @@ candidate.
    tailored lint cv.html cover.html
    tailored page-fit out/cv.pdf --max 1
    tailored page-fit out/cover.pdf --max 1
+   tailored ats out/cv.pdf --jd jd.yaml
    tailored ip-guard cv.html --canon canon.yaml
    tailored ip-guard cover.html --canon canon.yaml
    ```
@@ -104,8 +123,9 @@ candidate.
    Read the preview. Check the header, the spacing, the line breaks, and whether
    the tailoring actually lands. This is the human-in-the-loop gate.
 
-7. **Deliver.** Hand over the PDFs. The rendered output and the canon stay on the
-   user's machine.
+7. **Deliver.** Hand over the PDFs, the CV and cover note alongside the archived
+   `job-description.pdf`, all in the same folder. The rendered output and the
+   canon stay on the user's machine.
 
 ## Privacy
 

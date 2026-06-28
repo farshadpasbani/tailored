@@ -1,14 +1,18 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { loadCanon } from "./canon/load.js";
+import { loadJd } from "./jd/load.js";
 import { lintAiTells } from "./gates/aiTell.js";
 import { assertPageFit } from "./gates/pageFit.js";
+import { extractPdfText } from "./gates/run.js";
+import { analyzeAts } from "./gates/ats.js";
 import { scanProtected } from "./gates/ipGuard.js";
 import { renderToPdf } from "./render/chrome.js";
+import { jdMarkdownToHtml } from "./jd/pdf.js";
 import { version } from "./index.js";
 
 const program = new Command();
@@ -77,6 +81,35 @@ program
   });
 
 program
+  .command("ats")
+  .description("check a rendered CV PDF parses for ATS and covers a job's must-have keywords")
+  .argument("<pdf>", "path to the rendered CV PDF")
+  .requiredOption("--jd <jd>", "path to jd.yaml (role keywords)")
+  .option("--min <ratio>", "minimum must-have coverage to pass (0..1)", "0.8")
+  .action(async (pdf: string, opts: { jd: string; min: string }) => {
+    const min = Number(opts.min);
+    if (!(min >= 0 && min <= 1)) fail(`--min must be a number in [0,1], got ${JSON.stringify(opts.min)}`);
+    const jd = loadJd(opts.jd);
+    if (!jd.ok) fail(`invalid jd\n  ${jd.errors.join("\n  ")}`);
+    // Warn on orphan synonym keys (likely typos): a synonym for a term that is not gated does nothing.
+    for (const key of Object.keys(jd.data.synonyms)) {
+      if (![...jd.data.mustHave, ...jd.data.niceToHave].includes(key))
+        console.error(`WARN: synonym key "${key}" is not in mustHave/niceToHave`);
+    }
+    let text: string;
+    try { text = await extractPdfText(pdf); }
+    catch (e) { fail((e as Error).message); }
+    const r = analyzeAts(text, jd.data, min);
+    if (!r.parse.textLayer) console.error("  parse: no text layer (image-only PDF?)");
+    if (!r.parse.contact) console.error("  parse: no contact email found");
+    if (r.parse.headings < 3) console.error(`  parse: only ${r.parse.headings}/3 standard headings found`);
+    for (const m of r.must.missing) console.error(`  missing must-have: ${m}`);
+    const pct = Math.round(r.must.ratio * 100);
+    if (!r.ok) fail(`ats: ${r.parse.ok ? "parseable" : "not parseable"}, must-have coverage ${pct}% (${r.must.covered.length}/${jd.data.mustHave.length}), min ${Math.round(min * 100)}%`);
+    console.log(`PASS: ats - parseable, must-have coverage ${pct}% (${r.must.covered.length}/${jd.data.mustHave.length}); nice-to-have ${Math.round(r.nice.ratio * 100)}%`);
+  });
+
+program
   .command("render")
   .description("render an HTML file to PDF via headless Chrome")
   .argument("<html>", "path to the HTML file")
@@ -85,6 +118,34 @@ program
     try { await renderToPdf(html, pdf); }
     catch (e) { fail((e as Error).message); }
     console.log(`PASS: rendered ${html} to ${pdf}`);
+  });
+
+program
+  .command("jd-pdf")
+  .description("render a captured job description (markdown/text) to an archival PDF beside the CV")
+  .argument("<input>", "path to the captured job description (markdown or plain text)")
+  .argument("<pdf>", "output PDF path")
+  .option("--title <title>", "role title for the header")
+  .option("--company <company>", "company name for the header")
+  .option("--location <location>", "location for the header")
+  .option("--source <url>", "source URL of the posting")
+  .option("--date <date>", "capture date (YYYY-MM-DD); defaults to today")
+  .action(async (input: string, pdf: string, opts: { title?: string; company?: string; location?: string; source?: string; date?: string }) => {
+    let markdown: string;
+    try { markdown = readFileSync(input, "utf8"); }
+    catch (e) { fail(`cannot read ${input}: ${(e as Error).message}`); }
+    const date = opts.date ?? new Date().toISOString().slice(0, 10);
+    const html = jdMarkdownToHtml(markdown, { title: opts.title, company: opts.company, location: opts.location, source: opts.source, date });
+    const htmlPath = join(tmpdir(), `tailored-jd-${process.pid}.html`);
+    try {
+      writeFileSync(htmlPath, html, "utf8");
+      // The JD body is untrusted employer text. We escape it, but disable scripts in
+      // the renderer too as defence in depth: a job description never needs JS.
+      // NB: --blink-settings=scriptEnabled=false makes headless Chrome exit 0 while
+      // writing no PDF; --disable-javascript disables JS without breaking print-to-pdf.
+      await renderToPdf(htmlPath, pdf, { extraArgs: ["--disable-javascript"] });
+    } catch (e) { fail((e as Error).message); }
+    console.log(`PASS: rendered job description to ${pdf}`);
   });
 
 program
@@ -104,7 +165,15 @@ program
     try { res = await assertPageFit(pdf, 1); }
     catch (e) { fail((e as Error).message); }
     if (!res.ok) fail(`${html} rendered to ${res.pages} page(s), over the limit of ${res.max}`);
-    console.log(`PASS: smoke rendered ${html} to ${res.pages} page(s) (max ${res.max}), clean of AI tells`);
+    const jdPath = fileURLToPath(new URL("../examples/alex-rivers/jd.yaml", import.meta.url));
+    const jd = loadJd(jdPath);
+    if (!jd.ok) fail(`example jd invalid:\n  ${jd.errors.join("\n  ")}`);
+    let atsText: string;
+    try { atsText = await extractPdfText(pdf); }
+    catch (e) { fail((e as Error).message); }
+    const ats = analyzeAts(atsText, jd.data, 0.8);
+    if (!ats.ok) fail(`example CV fails ats: coverage ${Math.round(ats.must.ratio * 100)}%, missing ${ats.must.missing.join(", ")}`);
+    console.log(`PASS: smoke rendered ${html} to ${res.pages} page(s) (max ${res.max}), clean of AI tells, ats coverage ${Math.round(ats.must.ratio * 100)}%`);
   });
 
 program.parseAsync(process.argv);
