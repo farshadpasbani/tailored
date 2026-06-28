@@ -76,7 +76,12 @@ tailored lint cv.html cover.html
 tailored render cv.html out/cv.pdf
 tailored page-fit out/cv.pdf --max 1
 tailored ip-guard cv.html --canon canon.yaml
+tailored jd-pdf job-description.md out/job-description.pdf --title "Role" --company "Company"
 ```
+
+The `jd-pdf` command renders a captured job posting to an archival PDF, so the
+delivered folder keeps the CV, the cover note, and the role it was tailored to
+side by side.
 
 Or run the bundled example end to end:
 

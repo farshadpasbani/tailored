@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +12,7 @@ import { extractPdfText } from "./gates/run.js";
 import { analyzeAts } from "./gates/ats.js";
 import { scanProtected } from "./gates/ipGuard.js";
 import { renderToPdf } from "./render/chrome.js";
+import { jdMarkdownToHtml } from "./jd/pdf.js";
 import { version } from "./index.js";
 
 const program = new Command();
@@ -117,6 +118,34 @@ program
     try { await renderToPdf(html, pdf); }
     catch (e) { fail((e as Error).message); }
     console.log(`PASS: rendered ${html} to ${pdf}`);
+  });
+
+program
+  .command("jd-pdf")
+  .description("render a captured job description (markdown/text) to an archival PDF beside the CV")
+  .argument("<input>", "path to the captured job description (markdown or plain text)")
+  .argument("<pdf>", "output PDF path")
+  .option("--title <title>", "role title for the header")
+  .option("--company <company>", "company name for the header")
+  .option("--location <location>", "location for the header")
+  .option("--source <url>", "source URL of the posting")
+  .option("--date <date>", "capture date (YYYY-MM-DD); defaults to today")
+  .action(async (input: string, pdf: string, opts: { title?: string; company?: string; location?: string; source?: string; date?: string }) => {
+    let markdown: string;
+    try { markdown = readFileSync(input, "utf8"); }
+    catch (e) { fail(`cannot read ${input}: ${(e as Error).message}`); }
+    const date = opts.date ?? new Date().toISOString().slice(0, 10);
+    const html = jdMarkdownToHtml(markdown, { title: opts.title, company: opts.company, location: opts.location, source: opts.source, date });
+    const htmlPath = join(tmpdir(), `tailored-jd-${process.pid}.html`);
+    try {
+      writeFileSync(htmlPath, html, "utf8");
+      // The JD body is untrusted employer text. We escape it, but disable scripts in
+      // the renderer too as defence in depth: a job description never needs JS.
+      // NB: --blink-settings=scriptEnabled=false makes headless Chrome exit 0 while
+      // writing no PDF; --disable-javascript disables JS without breaking print-to-pdf.
+      await renderToPdf(htmlPath, pdf, { extraArgs: ["--disable-javascript"] });
+    } catch (e) { fail((e as Error).message); }
+    console.log(`PASS: rendered job description to ${pdf}`);
   });
 
 program

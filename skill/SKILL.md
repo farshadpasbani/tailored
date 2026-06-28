@@ -74,6 +74,17 @@ candidate.
    with the candidate, never a licence to fabricate a skill. See
    `examples/alex-rivers/jd.yaml` for the shape.
 
+   Also save the full posting text verbatim to `job-description.md` and render it
+   to an archival PDF, so the delivered folder is self-contained (you can always
+   see what was applied to). The CLI cannot fetch a login-walled link itself, so
+   capture the text yourself, then render:
+
+   ```sh
+   tailored jd-pdf job-description.md out/job-description.pdf \
+     --title "Role title" --company "Company" --location "City, UK" \
+     --source "https://..." --date 2026-06-27
+   ```
+
 2. **Load the canon.** Run `tailored validate canon.yaml`. Read the candidate's
    facts, their `claims`, and their `protectedTopics`. Everything you write must
    trace to a fact in the canon. Do not invent employers, dates, metrics, or
@@ -112,8 +123,9 @@ candidate.
    Read the preview. Check the header, the spacing, the line breaks, and whether
    the tailoring actually lands. This is the human-in-the-loop gate.
 
-7. **Deliver.** Hand over the PDFs. The rendered output and the canon stay on the
-   user's machine.
+7. **Deliver.** Hand over the PDFs, the CV and cover note alongside the archived
+   `job-description.pdf`, all in the same folder. The rendered output and the
+   canon stay on the user's machine.
 
 ## Privacy
 
