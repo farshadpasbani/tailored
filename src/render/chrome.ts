@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { resolve as resolvePath } from "node:path";
 
@@ -34,9 +34,16 @@ export async function renderToPdf(htmlPath: string, pdfPath: string, opts: Rende
   const abs = resolvePath(htmlPath);
   const ci = opts.ci ?? Boolean((opts.env ?? process.env).CI);
   const args = buildChromeArgs(abs, pdfPath, { ci, extraArgs: opts.extraArgs });
+  let err = "";
   await new Promise<void>((done, reject) => {
     const p = spawn(bin, args);
-    let err = ""; p.stderr.on("data", (d) => (err += d));
+    p.stderr.on("data", (d) => (err += d));
     p.on("error", reject); p.on("close", (c) => (c === 0 ? done() : reject(new Error(err || `chrome exited ${c}`))));
   });
+  // Chrome can exit 0 yet write nothing (e.g. certain --blink-settings combinations).
+  // Trust the artifact, not the exit code: a "successful" render with no output PDF is
+  // a silent failure, so assert the file exists and is non-empty before claiming success.
+  if (!existsSync(pdfPath) || statSync(pdfPath).size === 0) {
+    throw new Error(`chrome exited 0 but produced no PDF at ${pdfPath}${err ? `: ${err}` : ""}`);
+  }
 }

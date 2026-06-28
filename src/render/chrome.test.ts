@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { findChrome, buildChromeArgs } from "./chrome.js";
+import { mkdtempSync, writeFileSync, chmodSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { findChrome, buildChromeArgs, renderToPdf } from "./chrome.js";
 describe("buildChromeArgs", () => {
   it("keeps the sandbox on by default (local use)", () => {
     const a = buildChromeArgs("/abs/cv.html", "/out/cv.pdf");
@@ -30,4 +33,25 @@ describe("findChrome", () => {
   it("finds chromium on linux", () => { expect(findChrome({ env: {}, platform: "linux", exists: (p) => p === "/usr/bin/chromium" })).toBe("/usr/bin/chromium"); });
   it("finds the snap chromium shim on linux", () => { expect(findChrome({ env: {}, platform: "linux", exists: (p) => p === "/snap/bin/chromium" })).toBe("/snap/bin/chromium"); });
   it("returns null when nothing is found", () => { expect(findChrome({ env: {}, platform: "linux", exists: () => false })).toBeNull(); });
+});
+describe("renderToPdf artifact check", () => {
+  const dir = mkdtempSync(join(tmpdir(), "tailored-render-"));
+  const html = join(dir, "in.html");
+  writeFileSync(html, "<!doctype html><p>hi</p>");
+  const fakeChrome = (body: string) => {
+    const p = join(dir, `chrome-${Math.abs(body.length)}-${body.includes("touch") ? "ok" : "noop"}.sh`);
+    writeFileSync(p, `#!/bin/sh\n${body}\nexit 0\n`);
+    chmodSync(p, 0o755);
+    return p;
+  };
+  it("throws when Chrome exits 0 but writes no PDF (silent failure)", async () => {
+    const bin = fakeChrome(":"); // no-op: exits 0, produces nothing
+    await expect(renderToPdf(html, join(dir, "out-noop.pdf"), { env: { CHROME_BIN: bin } }))
+      .rejects.toThrow(/produced no PDF/);
+  });
+  it("resolves when the PDF is written and non-empty", async () => {
+    const out = join(dir, "out-ok.pdf");
+    const bin = fakeChrome(`printf '%%PDF-1.4 stub' > "${out}" # touch`);
+    await expect(renderToPdf(html, out, { env: { CHROME_BIN: bin } })).resolves.toBeUndefined();
+  });
 });
