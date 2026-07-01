@@ -43,8 +43,10 @@ export interface ReadabilityResult {
 
 /** Body font-size and @page margins must not be compressed below the floor to force page-fit. */
 export function checkReadability(html: string, minFontPt: number, minMarginMm: number): ReadabilityResult {
-  const bodyMatch = html.match(/\bbody\s*{[^}]*}/i);
-  const fontMatch = bodyMatch?.[0].match(/font-size:\s*([\d.]+)pt/i);
+  // Several selectors may include "body" (e.g. a shared "html, body { margin: 0 }" reset);
+  // take the first body block that actually declares a font-size.
+  const bodyBlocks = html.match(/\bbody\s*{[^}]*}/gi) ?? [];
+  const fontMatch = bodyBlocks.map((b) => b.match(/font-size:\s*([\d.]+)pt/i)).find(Boolean);
   const fontPt = fontMatch ? Number(fontMatch[1]) : null;
 
   const pageMatch = html.match(/@page\s*{[^}]*}/i);

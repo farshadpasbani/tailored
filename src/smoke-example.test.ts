@@ -10,6 +10,7 @@ import { scanProtected } from "./gates/ipGuard.js";
 import { analyzeAts } from "./gates/ats.js";
 import { canonToText, analyzeFit } from "./gates/fit.js";
 import { analyzeTrace, extractTitledEntries, extractProjectNames } from "./gates/trace.js";
+import { analyzeImpact, defaultImpactOptions } from "./gates/impact.js";
 import { extractPdfText } from "./gates/run.js";
 import { renderToPdf, findChrome } from "./render/chrome.js";
 
@@ -48,6 +49,9 @@ describe("alex-rivers example", () => {
     const html = readFileSync("examples/alex-rivers/cv.html", "utf8");
     expect(extractTitledEntries(html).length).toBeGreaterThanOrEqual(1);
     expect(extractProjectNames(html).length).toBeGreaterThanOrEqual(1);
+  });
+  it("passes the impact lint gate", () => {
+    expect(analyzeImpact(readFileSync("examples/alex-rivers/cv.html", "utf8"), defaultImpactOptions).ok).toBe(true);
   });
 });
 

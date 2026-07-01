@@ -25,6 +25,17 @@ describe("checkReadability", () => {
     expect(r.ok).toBe(false);
     expect(r.marginOk).toBe(false);
   });
+
+  it("finds font-size on the real body rule even when an earlier 'html, body { ... }' reset rule has none", () => {
+    const html = `<style>
+      @page { size: A4; margin: 10mm 14mm; }
+      html, body { margin: 0; padding: 0; }
+      body { font-family: sans-serif; font-size: 10pt; line-height: 1.28; }
+    </style>`;
+    const r = checkReadability(html, 9, 8);
+    expect(r.fontPt).toBe(10);
+    expect(r.ok).toBe(true);
+  });
 });
 
 describe("checkSummaryCeiling", () => {
