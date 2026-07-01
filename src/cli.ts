@@ -10,6 +10,7 @@ import { lintAiTells } from "./gates/aiTell.js";
 import { assertPageFit } from "./gates/pageFit.js";
 import { extractPdfText } from "./gates/run.js";
 import { analyzeAts } from "./gates/ats.js";
+import { canonToText, analyzeFit, validateThresholds } from "./gates/fit.js";
 import { scanProtected } from "./gates/ipGuard.js";
 import { renderToPdf } from "./render/chrome.js";
 import { jdMarkdownToHtml } from "./jd/pdf.js";
@@ -110,6 +111,31 @@ program
   });
 
 program
+  .command("fit")
+  .description("triage a jd's must-have coverage against the canon before authoring anything")
+  .requiredOption("--jd <jd>", "path to jd.yaml")
+  .requiredOption("--canon <canon>", "path to canon.yaml")
+  .option("--apply <ratio>", "must-have coverage at/above which the verdict is APPLY", "0.8")
+  .option("--floor <ratio>", "must-have coverage below which the verdict is SKIP", "0.5")
+  .action((opts: { jd: string; canon: string; apply: string; floor: string }) => {
+    const apply = Number(opts.apply), floor = Number(opts.floor);
+    if (!(apply >= 0 && apply <= 1)) fail(`--apply must be a number in [0,1], got ${JSON.stringify(opts.apply)}`);
+    if (!(floor >= 0 && floor <= 1)) fail(`--floor must be a number in [0,1], got ${JSON.stringify(opts.floor)}`);
+    const thresholdError = validateThresholds(apply, floor);
+    if (thresholdError) fail(thresholdError);
+    const jd = loadJd(opts.jd);
+    if (!jd.ok) fail(`invalid jd\n  ${jd.errors.join("\n  ")}`);
+    const canon = loadCanon(opts.canon);
+    if (!canon.ok) fail(`invalid canon\n  ${canon.errors.join("\n  ")}`);
+    const r = analyzeFit(canonToText(canon.data), jd.data, { apply, floor });
+    for (const m of r.must.missing)
+      console.error(`  gap: "${m}" not covered by the canon - does the canon genuinely lack it, or is it phrased differently?`);
+    const pct = Math.round(r.must.ratio * 100);
+    console.log(`${r.verdict}: must-have coverage ${pct}% (${r.must.covered.length}/${jd.data.mustHave.length}); nice-to-have ${Math.round(r.nice.ratio * 100)}%`);
+    if (r.verdict === "SKIP") process.exit(1);
+  });
+
+program
   .command("render")
   .description("render an HTML file to PDF via headless Chrome")
   .argument("<html>", "path to the HTML file")
@@ -168,12 +194,17 @@ program
     const jdPath = fileURLToPath(new URL("../examples/alex-rivers/jd.yaml", import.meta.url));
     const jd = loadJd(jdPath);
     if (!jd.ok) fail(`example jd invalid:\n  ${jd.errors.join("\n  ")}`);
+    const canonPath = fileURLToPath(new URL("../examples/alex-rivers/canon.yaml", import.meta.url));
+    const canon = loadCanon(canonPath);
+    if (!canon.ok) fail(`example canon invalid:\n  ${canon.errors.join("\n  ")}`);
+    const fit = analyzeFit(canonToText(canon.data), jd.data, { apply: 0.8, floor: 0.5 });
+    if (fit.verdict !== "APPLY") fail(`example candidate does not verdict APPLY on fit: ${fit.verdict}, missing ${fit.must.missing.join(", ")}`);
     let atsText: string;
     try { atsText = await extractPdfText(pdf); }
     catch (e) { fail((e as Error).message); }
     const ats = analyzeAts(atsText, jd.data, 0.8);
     if (!ats.ok) fail(`example CV fails ats: coverage ${Math.round(ats.must.ratio * 100)}%, missing ${ats.must.missing.join(", ")}`);
-    console.log(`PASS: smoke rendered ${html} to ${res.pages} page(s) (max ${res.max}), clean of AI tells, ats coverage ${Math.round(ats.must.ratio * 100)}%`);
+    console.log(`PASS: smoke rendered ${html} to ${res.pages} page(s) (max ${res.max}), fit verdict ${fit.verdict}, clean of AI tells, ats coverage ${Math.round(ats.must.ratio * 100)}%`);
   });
 
 program.parseAsync(process.argv);
