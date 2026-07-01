@@ -11,6 +11,7 @@ import { assertPageFit } from "./gates/pageFit.js";
 import { extractPdfText } from "./gates/run.js";
 import { analyzeAts } from "./gates/ats.js";
 import { canonToText, analyzeFit, validateThresholds } from "./gates/fit.js";
+import { analyzeTrace } from "./gates/trace.js";
 import { scanProtected } from "./gates/ipGuard.js";
 import { renderToPdf } from "./render/chrome.js";
 import { jdMarkdownToHtml } from "./jd/pdf.js";
@@ -136,6 +137,30 @@ program
   });
 
 program
+  .command("trace")
+  .description("check every numeric claim, employer, institution, and project in an HTML document traces to the canon")
+  .argument("<html>", "path to the rendered HTML document (cv.html or cover.html)")
+  .requiredOption("--canon <canon>", "path to canon.yaml")
+  .option("--jd-text <path>", "path to the archived job description text, for claims that describe the employer")
+  .action((html: string, opts: { canon: string; jdText?: string }) => {
+    const r = loadCanon(opts.canon);
+    if (!r.ok) fail(`invalid canon\n  ${r.errors.join("\n  ")}`);
+    let content: string;
+    try { content = readFileSync(html, "utf8"); }
+    catch (e) { fail(`cannot read ${html}: ${(e as Error).message}`); }
+    let jdText = "";
+    if (opts.jdText) {
+      try { jdText = readFileSync(opts.jdText, "utf8"); }
+      catch (e) { fail(`cannot read ${opts.jdText}: ${(e as Error).message}`); }
+    }
+    const result = analyzeTrace(content, r.data, jdText);
+    for (const c of result.untracedNumbers) console.error(`  untraced claim: "${c.raw}" (no matching value in the canon${opts.jdText ? " or --jd-text" : ""})`);
+    for (const i of result.nameIssues) console.error(i.kind === "unknown-name" ? `  unknown name: "${i.detail}" (not in the canon)` : `  date mismatch: ${i.detail} (does not match the canon)`);
+    if (!result.ok) fail(`trace: ${result.untracedNumbers.length} untraced claim(s), ${result.nameIssues.length} name/date issue(s) in ${html}`);
+    console.log(`PASS: trace - every claim in ${html} traces to the canon`);
+  });
+
+program
   .command("render")
   .description("render an HTML file to PDF via headless Chrome")
   .argument("<html>", "path to the HTML file")
@@ -182,8 +207,14 @@ program
     // so `tailored smoke` works from any working directory, including a global install.
     const html = fileURLToPath(new URL("../examples/alex-rivers/cv.html", import.meta.url));
     const pdf = join(tmpdir(), `tailored-smoke-${process.pid}.pdf`);
-    const tells = lintAiTells(readFileSync(html, "utf8"));
+    const htmlContent = readFileSync(html, "utf8");
+    const tells = lintAiTells(htmlContent);
     if (tells.length > 0) fail(`${html} has ${tells.length} AI tell(s)`);
+    const canonPath = fileURLToPath(new URL("../examples/alex-rivers/canon.yaml", import.meta.url));
+    const canon = loadCanon(canonPath);
+    if (!canon.ok) fail(`example canon invalid:\n  ${canon.errors.join("\n  ")}`);
+    const trace = analyzeTrace(htmlContent, canon.data, "");
+    if (!trace.ok) fail(`example CV fails trace: ${trace.untracedNumbers.length} untraced claim(s), ${trace.nameIssues.length} name/date issue(s)`);
     try { await renderToPdf(html, pdf); }
     catch (e) { fail((e as Error).message); }
     let res;
@@ -194,9 +225,6 @@ program
     const jdPath = fileURLToPath(new URL("../examples/alex-rivers/jd.yaml", import.meta.url));
     const jd = loadJd(jdPath);
     if (!jd.ok) fail(`example jd invalid:\n  ${jd.errors.join("\n  ")}`);
-    const canonPath = fileURLToPath(new URL("../examples/alex-rivers/canon.yaml", import.meta.url));
-    const canon = loadCanon(canonPath);
-    if (!canon.ok) fail(`example canon invalid:\n  ${canon.errors.join("\n  ")}`);
     const fit = analyzeFit(canonToText(canon.data), jd.data, { apply: 0.8, floor: 0.5 });
     if (fit.verdict !== "APPLY") fail(`example candidate does not verdict APPLY on fit: ${fit.verdict}, missing ${fit.must.missing.join(", ")}`);
     let atsText: string;
@@ -204,7 +232,7 @@ program
     catch (e) { fail((e as Error).message); }
     const ats = analyzeAts(atsText, jd.data, 0.8);
     if (!ats.ok) fail(`example CV fails ats: coverage ${Math.round(ats.must.ratio * 100)}%, missing ${ats.must.missing.join(", ")}`);
-    console.log(`PASS: smoke rendered ${html} to ${res.pages} page(s) (max ${res.max}), fit verdict ${fit.verdict}, clean of AI tells, ats coverage ${Math.round(ats.must.ratio * 100)}%`);
+    console.log(`PASS: smoke rendered ${html} to ${res.pages} page(s) (max ${res.max}), fit verdict ${fit.verdict}, clean of AI tells, ats coverage ${Math.round(ats.must.ratio * 100)}%, every claim traces to the canon`);
   });
 
 program.parseAsync(process.argv);

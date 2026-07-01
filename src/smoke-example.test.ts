@@ -9,6 +9,7 @@ import { lintAiTells } from "./gates/aiTell.js";
 import { scanProtected } from "./gates/ipGuard.js";
 import { analyzeAts } from "./gates/ats.js";
 import { canonToText, analyzeFit } from "./gates/fit.js";
+import { analyzeTrace } from "./gates/trace.js";
 import { extractPdfText } from "./gates/run.js";
 import { renderToPdf, findChrome } from "./render/chrome.js";
 
@@ -38,6 +39,10 @@ describe("alex-rivers example", () => {
     const jd = { role: "X", mustHave: ["cobol", "fortran", "assembly"], niceToHave: [], synonyms: {} };
     const r = analyzeFit(canonToText(canon.data), jd, { apply: 0.8, floor: 0.5 });
     expect(r.verdict).toBe("SKIP");
+  });
+  it("passes the trace gate: every claim in cv.html traces to its own canon", () => {
+    const r = loadCanon("examples/alex-rivers/canon.yaml"); expect(r.ok).toBe(true);
+    if (r.ok) expect(analyzeTrace(readFileSync("examples/alex-rivers/cv.html", "utf8"), r.data, "").ok).toBe(true);
   });
 });
 
