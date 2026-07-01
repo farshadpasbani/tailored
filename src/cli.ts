@@ -10,6 +10,7 @@ import { lintAiTells } from "./gates/aiTell.js";
 import { assertPageFit } from "./gates/pageFit.js";
 import { extractPdfText } from "./gates/run.js";
 import { analyzeAts } from "./gates/ats.js";
+import { canonToText, analyzeFit, validateThresholds } from "./gates/fit.js";
 import { scanProtected } from "./gates/ipGuard.js";
 import { renderToPdf } from "./render/chrome.js";
 import { jdMarkdownToHtml } from "./jd/pdf.js";
@@ -107,6 +108,31 @@ program
     const pct = Math.round(r.must.ratio * 100);
     if (!r.ok) fail(`ats: ${r.parse.ok ? "parseable" : "not parseable"}, must-have coverage ${pct}% (${r.must.covered.length}/${jd.data.mustHave.length}), min ${Math.round(min * 100)}%`);
     console.log(`PASS: ats - parseable, must-have coverage ${pct}% (${r.must.covered.length}/${jd.data.mustHave.length}); nice-to-have ${Math.round(r.nice.ratio * 100)}%`);
+  });
+
+program
+  .command("fit")
+  .description("triage a jd's must-have coverage against the canon before authoring anything")
+  .requiredOption("--jd <jd>", "path to jd.yaml")
+  .requiredOption("--canon <canon>", "path to canon.yaml")
+  .option("--apply <ratio>", "must-have coverage at/above which the verdict is APPLY", "0.8")
+  .option("--floor <ratio>", "must-have coverage below which the verdict is SKIP", "0.5")
+  .action((opts: { jd: string; canon: string; apply: string; floor: string }) => {
+    const apply = Number(opts.apply), floor = Number(opts.floor);
+    if (!(apply >= 0 && apply <= 1)) fail(`--apply must be a number in [0,1], got ${JSON.stringify(opts.apply)}`);
+    if (!(floor >= 0 && floor <= 1)) fail(`--floor must be a number in [0,1], got ${JSON.stringify(opts.floor)}`);
+    const thresholdError = validateThresholds(apply, floor);
+    if (thresholdError) fail(thresholdError);
+    const jd = loadJd(opts.jd);
+    if (!jd.ok) fail(`invalid jd\n  ${jd.errors.join("\n  ")}`);
+    const canon = loadCanon(opts.canon);
+    if (!canon.ok) fail(`invalid canon\n  ${canon.errors.join("\n  ")}`);
+    const r = analyzeFit(canonToText(canon.data), jd.data, { apply, floor });
+    for (const m of r.must.missing)
+      console.error(`  gap: "${m}" not covered by the canon - does the canon genuinely lack it, or is it phrased differently?`);
+    const pct = Math.round(r.must.ratio * 100);
+    console.log(`${r.verdict}: must-have coverage ${pct}% (${r.must.covered.length}/${jd.data.mustHave.length}); nice-to-have ${Math.round(r.nice.ratio * 100)}%`);
+    if (r.verdict === "SKIP") process.exit(1);
   });
 
 program
