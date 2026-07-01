@@ -83,7 +83,10 @@
   <section>
     <h2>Selected Projects</h2>
     <div class="entry">
-      <div class="title">Gatehouse: a deterministic policy layer that wraps a stochastic model in testable gates</div>
+      <div class="eh">
+        <div class="title">Gatehouse: a deterministic policy layer that wraps a stochastic model in testable gates</div>
+        <div class="meta">2024</div>
+      </div>
       <ul>
         <li>Designed a gate pipeline so model output is checked against schema, style, and safety rules before it ever reaches a user, turning flaky behaviour into a build-time failure.</li>
         <li>Cut review time for generated documents by roughly two thirds by making the unhappy paths fail loudly in continuous integration rather than silently in production.</li>
@@ -91,14 +94,20 @@
       <div class="links"><a href="https://github.com/alexrivers/gatehouse">github.com/alexrivers/gatehouse</a></div>
     </div>
     <div class="entry">
-      <div class="title">Lighthouse: an evaluation harness that scores model changes against a frozen rubric</div>
+      <div class="eh">
+        <div class="title">Lighthouse: an evaluation harness that scores model changes against a frozen rubric</div>
+        <div class="meta">2023</div>
+      </div>
       <ul>
         <li>Built a reproducible scoring loop so any prompt or model swap is measured against the same fixtures, giving the team a number to argue about instead of a vibe.</li>
         <li>Wired the harness into the release gate so a regression in answer quality blocks the merge automatically.</li>
       </ul>
     </div>
     <div class="entry">
-      <div class="title">Ferry: a low-latency retrieval service for grounding answers in private documents</div>
+      <div class="eh">
+        <div class="title">Ferry: a low-latency retrieval service for grounding answers in private documents</div>
+        <div class="meta">2022</div>
+      </div>
       <ul>
         <li>Implemented a hybrid retrieval path combining keyword and vector search, tuned so the median grounded answer returns in well under a second.</li>
         <li>Added per-tenant isolation so one customer's documents can never surface in another customer's results.</li>

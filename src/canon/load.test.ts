@@ -15,4 +15,9 @@ describe("parseCanon", () => {
     if (!r.ok) expect(r.errors.join("\n")).toMatch(/identity.*name/i);
   });
   it("rejects a non-object", () => { expect(parseCanon(42).ok).toBe(false); });
+  it("accepts an optional year on a project", () => {
+    const r = parseCanon({ ...minimal, projects: [{ name: "Gatehouse", year: "2024", bullets: ["Did a thing."] }] });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.data.projects[0].year).toBe("2024");
+  });
 });

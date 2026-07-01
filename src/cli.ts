@@ -12,6 +12,7 @@ import { extractPdfText } from "./gates/run.js";
 import { analyzeAts } from "./gates/ats.js";
 import { canonToText, analyzeFit, validateThresholds } from "./gates/fit.js";
 import { analyzeTrace } from "./gates/trace.js";
+import { analyzeImpact, type ImpactOptions } from "./gates/impact.js";
 import { scanProtected } from "./gates/ipGuard.js";
 import { renderToPdf } from "./render/chrome.js";
 import { jdMarkdownToHtml } from "./jd/pdf.js";
@@ -162,6 +163,67 @@ program
   });
 
 program
+  .command("impact")
+  .description("lint a CV against the recruiter six-second skim (readability, summary length, duplication, voice, dates, bullets)")
+  .argument("<html>", "path to the authored CV HTML")
+  .option("--min-font <pt>", "minimum body font-size in pt", "9")
+  .option("--min-margin <mm>", "minimum @page margin in mm", "8")
+  .option("--summary-max-words <n>", "maximum words in .summary", "60")
+  .option("--bullet-max-words <n>", "maximum words per li", "45")
+  .option("--skip-min-font", "silence the minimum font-size check")
+  .option("--skip-min-margin", "silence the minimum page-margin check")
+  .option("--skip-summary-ceiling", "silence the summary word-ceiling check")
+  .option("--skip-duplicate-sentence", "silence the duplicate-sentence check")
+  .option("--skip-contrast", "silence the rhetorical-contrast counter")
+  .option("--skip-person-consistency", "silence the person-consistency check")
+  .option("--skip-dated-entries", "silence the dated-entries check")
+  .option("--skip-bullet-bounds", "silence the bullet bounds/weak-phrase check")
+  .action((html: string, opts: Record<string, string | boolean | undefined>) => {
+    const minFontPt = Number(opts.minFont);
+    const minMarginMm = Number(opts.minMargin);
+    const summaryMaxWords = Number(opts.summaryMaxWords);
+    const bulletMaxWords = Number(opts.bulletMaxWords);
+    if (![minFontPt, minMarginMm, summaryMaxWords, bulletMaxWords].every((n) => Number.isFinite(n) && n > 0))
+      fail("--min-font, --min-margin, --summary-max-words, and --bullet-max-words must be positive numbers");
+    const options: ImpactOptions = {
+      minFontPt, minMarginMm, summaryMaxWords, bulletMaxWords,
+      checkMinFont: !opts.skipMinFont,
+      checkMinMargin: !opts.skipMinMargin,
+      checkSummaryCeiling: !opts.skipSummaryCeiling,
+      checkDuplicateSentence: !opts.skipDuplicateSentence,
+      checkContrast: !opts.skipContrast,
+      checkPersonConsistency: !opts.skipPersonConsistency,
+      checkDatedEntries: !opts.skipDatedEntries,
+      checkBulletBounds: !opts.skipBulletBounds,
+    };
+    let content: string;
+    try { content = readFileSync(html, "utf8"); }
+    catch (e) { fail(`cannot read ${html}: ${(e as Error).message}`); }
+    const r = analyzeImpact(content, options);
+    let violations = 0;
+    if (r.readability && !r.readability.fontOk) { console.error(`  readability: body font-size ${r.readability.fontPt ?? "unknown"}pt is below the floor of ${minFontPt}pt`); violations++; }
+    if (r.readability && !r.readability.marginOk) { console.error(`  readability: @page margin ${r.readability.marginMm.join("mm, ") || "unknown"}mm is below the floor of ${minMarginMm}mm`); violations++; }
+    if (r.summary && !r.summary.ok) { console.error(`  summary ceiling: .summary is ${r.summary.words} words, over the ${summaryMaxWords}-word ceiling`); violations++; }
+    if (r.duplicates && !r.duplicates.ok) {
+      for (const d of r.duplicates.duplicates) {
+        const lines = d.locations.map((l) => l.line).join(" and ");
+        console.error(`  duplicate sentence (lines ${lines}): "${d.sentence}"`);
+        violations++;
+      }
+    }
+    if (r.contrast && !r.contrast.ok) { console.error(`  rhetorical contrast: "${r.contrast.matches.join('", "')}" used ${r.contrast.count} times, over the limit of 1`); violations++; }
+    if (r.person && !r.person.ok) { console.error("  person consistency: document mixes first-person and third-person self-reference"); violations++; }
+    if (r.dated && !r.dated.ok) {
+      for (const u of r.dated.undated) { console.error(`  dated entries: undated entry in ${u.section}: "${u.header}"`); violations++; }
+    }
+    if (r.bullets && !r.bullets.ok) {
+      for (const v of r.bullets.violations) { console.error(`  bullet bounds (${v.reason}): "${v.text}"`); violations++; }
+    }
+    if (!r.ok) fail(`impact: ${violations} violation(s) in ${html}`);
+    console.log(`PASS: impact - ${html} clean of all enabled checks`);
+  });
+
+program
   .command("render")
   .description("render an HTML file to PDF via headless Chrome")
   .argument("<html>", "path to the HTML file")
@@ -216,6 +278,12 @@ program
     if (!canon.ok) fail(`example canon invalid:\n  ${canon.errors.join("\n  ")}`);
     const trace = analyzeTrace(htmlContent, canon.data, "");
     if (!trace.ok) fail(`example CV fails trace: ${trace.untracedNumbers.length} untraced claim(s), ${trace.nameIssues.length} name/date issue(s), ${trace.structuralIssues.length} structural issue(s)`);
+    const impact = analyzeImpact(htmlContent, {
+      minFontPt: 9, minMarginMm: 8, summaryMaxWords: 60, bulletMaxWords: 45,
+      checkMinFont: true, checkMinMargin: true, checkSummaryCeiling: true, checkDuplicateSentence: true,
+      checkContrast: true, checkPersonConsistency: true, checkDatedEntries: true, checkBulletBounds: true,
+    });
+    if (!impact.ok) fail(`${html} fails the impact lint gate`);
     try { await renderToPdf(html, pdf); }
     catch (e) { fail((e as Error).message); }
     let res;
@@ -233,7 +301,7 @@ program
     catch (e) { fail((e as Error).message); }
     const ats = analyzeAts(atsText, jd.data, 0.8);
     if (!ats.ok) fail(`example CV fails ats: coverage ${Math.round(ats.must.ratio * 100)}%, missing ${ats.must.missing.join(", ")}`);
-    console.log(`PASS: smoke rendered ${html} to ${res.pages} page(s) (max ${res.max}), fit verdict ${fit.verdict}, clean of AI tells, ats coverage ${Math.round(ats.must.ratio * 100)}%, every claim traces to the canon`);
+    console.log(`PASS: smoke rendered ${html} to ${res.pages} page(s) (max ${res.max}), fit verdict ${fit.verdict}, clean of AI tells, ats coverage ${Math.round(ats.must.ratio * 100)}%, every claim traces to the canon, impact clean`);
   });
 
 program.parseAsync(process.argv);

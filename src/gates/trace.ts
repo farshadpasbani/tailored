@@ -50,7 +50,9 @@ export function extractTitledEntries(html: string): TitledEntry[] {
 }
 
 // The house style separates a project's name from its tagline with a colon (house-style.md).
-const PROJECT_ENTRY_RE = /<div class="entry">\s*<div class="title">([^:<]+):/g;
+// A dated project entry wraps its title and year meta in an "eh" header div, so the
+// wrapper is optional here; an undated bare title remains valid too.
+const PROJECT_ENTRY_RE = /<div class="entry">\s*(?:<div class="eh">\s*)?<div class="title">([^:<]+):/g;
 
 /** Every project name declared in a "Name: tagline" .entry .title (see house-style.md). */
 export function extractProjectNames(html: string): string[] {

@@ -10,6 +10,7 @@ import { scanProtected } from "./gates/ipGuard.js";
 import { analyzeAts } from "./gates/ats.js";
 import { canonToText, analyzeFit } from "./gates/fit.js";
 import { analyzeTrace, extractTitledEntries, extractProjectNames } from "./gates/trace.js";
+import { analyzeImpact, defaultImpactOptions } from "./gates/impact.js";
 import { extractPdfText } from "./gates/run.js";
 import { renderToPdf, findChrome } from "./render/chrome.js";
 
@@ -48,6 +49,20 @@ describe("alex-rivers example", () => {
     const html = readFileSync("examples/alex-rivers/cv.html", "utf8");
     expect(extractTitledEntries(html).length).toBeGreaterThanOrEqual(1);
     expect(extractProjectNames(html).length).toBeGreaterThanOrEqual(1);
+  });
+  it("passes the impact lint gate", () => {
+    expect(analyzeImpact(readFileSync("examples/alex-rivers/cv.html", "utf8"), defaultImpactOptions).ok).toBe(true);
+  });
+  it("every project year shown in the CV traces to the canon (nothing invented)", () => {
+    const r = loadCanon("examples/alex-rivers/canon.yaml"); expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const cv = readFileSync("examples/alex-rivers/cv.html", "utf8");
+    for (const p of r.data.projects) {
+      const entry = cv.match(new RegExp(`<div class="title">${p.name}:[\\s\\S]*?<div class="meta">([^<]*)</div>`));
+      if (!entry) continue; // a canon project the CV chose not to show
+      expect(p.year, `project ${p.name} shows a year in the CV`).toBeDefined();
+      expect(entry[1].trim(), `project ${p.name} year matches the canon`).toBe(p.year);
+    }
   });
 });
 
