@@ -32,6 +32,24 @@ describe("extractNumericClaims", () => {
   it("ignores a bare year, leaving it to the date-range check", () => {
     expect(extractNumericClaims("Started in 2022")).toEqual([]);
   });
+  it("finds a bare magnitude-suffixed number glued to the digits (2M users)", () => {
+    const r = extractNumericClaims("scaled to 2M users");
+    expect(r).toEqual([{ raw: "2M", index: 10, value: 2_000_000 }]);
+  });
+  it("finds a lowercase k magnitude glued to the digits (40k)", () => {
+    const r = extractNumericClaims("cut costs by 40k");
+    expect(r).toEqual([{ raw: "40k", index: 13, value: 40_000 }]);
+  });
+  it("finds a bn magnitude glued to the digits (1.2bn)", () => {
+    const r = extractNumericClaims("processed 1.2bn events");
+    expect(r).toEqual([{ raw: "1.2bn", index: 10, value: 1_200_000_000 }]);
+  });
+  it("extracts a unit-suffixed count (200ms) using the bare number as its value", () => {
+    // An unknown letter suffix is treated as a unit, not a magnitude: the claim
+    // still needs a trace. Extracting-and-requiring beats silently dropping.
+    const r = extractNumericClaims("reduced latency 200ms");
+    expect(r).toEqual([{ raw: "200ms", index: 16, value: 200 }]);
+  });
 });
 
 describe("untracedNumbers", () => {
@@ -51,6 +69,24 @@ describe("untracedNumbers", () => {
   it("also traces against the jd text", () => {
     const claims = extractNumericClaims("a team of 12");
     expect(untracedNumbers(claims, "", "we are a team of 12 people")).toEqual([]);
+  });
+  it("flags a fabricated magnitude-suffixed metric (2M users) with no trace", () => {
+    const claims = extractNumericClaims("served 2M concurrent users");
+    const r = untracedNumbers(claims, "no such scale in the canon", "");
+    expect(r.map((c) => c.raw)).toEqual(["2M"]);
+  });
+  it("flags a fabricated 40k-style metric with no trace", () => {
+    const claims = extractNumericClaims("saved 40k annually");
+    const r = untracedNumbers(claims, "nothing numeric", "");
+    expect(r.map((c) => c.raw)).toEqual(["40k"]);
+  });
+  it("traces a glued magnitude form to its expanded value in the canon", () => {
+    const claims = extractNumericClaims("scaled to 2M users");
+    expect(untracedNumbers(claims, "grew the platform to 2,000,000 users", "")).toEqual([]);
+  });
+  it("traces a glued magnitude form to the same glued form in the canon", () => {
+    const claims = extractNumericClaims("cut costs by 40k");
+    expect(untracedNumbers(claims, "reduced spend by 40k a year", "")).toEqual([]);
   });
 });
 

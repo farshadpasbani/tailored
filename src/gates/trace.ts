@@ -4,16 +4,24 @@ import type { Canon } from "../canon/schema.js";
 export interface NumericClaim { raw: string; index: number; value: number; }
 
 const YEAR_RE = /^(19|20)\d{2}$/;
-// Currency (with optional k/m/bn magnitude), percentage, or a plain multi-digit count.
-const CLAIM_RE = /[£$€]\s?\d[\d,]*(?:\.\d+)?(?:\s?(?:k|m|bn))?\b|\d+(?:\.\d+)?%|\b\d[\d,]*(?:\.\d+)?\b/gi;
+// Currency (with optional k/m/bn magnitude), percentage, or a count with an optional
+// letter suffix glued to the digits (2M, 40k, 1.2bn, 200ms).
+const CLAIM_RE = /[£$€]\s?\d[\d,]*(?:\.\d+)?(?:\s?(?:k|m|bn))?\b|\d+(?:\.\d+)?%|\b\d[\d,]*(?:\.\d+)?[a-z]*\b/gi;
 
-/** Every checkable number in `text`: percentages, currency amounts, and plain counts. Bare years are left to the date-range check. */
+/**
+ * Every checkable number in `text`: percentages, currency amounts, and counts,
+ * including forms with a letter suffix glued to the digits. A known magnitude
+ * suffix (k/m/bn) is expanded (2M -> 2000000); any other letter suffix is
+ * treated as a unit and the bare number is the value (200ms -> 200), so the
+ * claim is still extracted and must trace rather than being silently dropped.
+ * Bare years are left to the date-range check.
+ */
 export function extractNumericClaims(text: string): NumericClaim[] {
   const claims: NumericClaim[] = [];
   for (const m of text.matchAll(CLAIM_RE)) {
     const raw = m[0];
     if (YEAR_RE.test(raw)) continue;
-    const value = normalizeNumber(raw);
+    const value = normalizeNumber(raw) ?? normalizeNumber(raw.replace(/[a-z]+$/i, ""));
     if (value === null) continue;
     claims.push({ raw, index: m.index, value });
   }
