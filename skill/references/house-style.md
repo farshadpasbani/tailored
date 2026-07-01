@@ -76,6 +76,32 @@ Summary, then Technical Skills, then Selected Projects, then Experience, then
 Education, then Publications and Certifications. Aim for one page. Use a colon to
 separate a project title from its tagline, never a dash.
 
+Every entry under Selected Projects and Experience must carry a year in its
+header line (wrap the title and a `.meta` year in an `.eh` flex row, the same
+shape Experience already uses). An undated entry gives neither a recruiter nor
+a recency-computing ATS a way to tell 2019 work from last month's; the
+`tailored impact` gate fails it.
+
+## Recruiter-skim discipline
+
+The `tailored impact` gate holds the authored HTML to the six-second skim, not
+just the ATS parse. Write to these rules, do not just fix them after the gate
+fails:
+
+- **Summary**: 60 words or fewer. It is a landing point, not a second cover note.
+- **No verbatim repeats**: never restate a project bullet's wording in the
+  summary (or anywhere else). A sentence of 8 or more words must not appear
+  twice in the document.
+- **One rhetorical contrast per document**: an "X, not Y" construction (or
+  `; not`, `, never` used the same way) reads as voice once and a template the
+  second time. Use it at most once across the whole CV.
+- **One grammatical person, no exceptions**: pick first person ("I own...") or
+  third-person-implied bullets ("Owns...", "Led...") and hold it. Never mix
+  "he/she/his/her" with "I/my" in the same document.
+- **Bullets stay bounded**: 45 words or fewer, and never open with a weak
+  passive lead-in ("Responsible for", "Involved in", "Worked on", "Helped to").
+  Open with the verb and the result instead.
+
 ## Cover note
 
 Same header (name, role, contact). Then an `h1` with the role title, a short
@@ -91,6 +117,10 @@ document spills onto a second page, tighten in this order before cutting content
 2. Reduce `header` and `h2` margins by a point or two.
 3. Nudge `line-height` down slightly (stay readable, around 1.28 to 1.32).
 
+Do not reach for a fourth step of shrinking the body `font-size` below 9pt or
+the `@page` margin below 8mm. Page-fit has to come from selecting less content,
+not from compressing what stays; `tailored impact` enforces this floor.
+
 Wrap any block that must not split across a page in a container with
 `break-inside: avoid` (the `.edu` rule already does this).
 
@@ -103,9 +133,10 @@ both, so you never hand-write a Chrome invocation.
 # render to PDF
 tailored render cv.html out/cv.pdf
 
-# deterministic gates: page count, AI tells, protected topics
+# deterministic gates: page count, AI tells, recruiter-skim discipline, protected topics
 tailored page-fit out/cv.pdf --max 1
 tailored lint cv.html cover.html
+tailored impact cv.html
 tailored ip-guard cv.html --canon canon.yaml
 
 # one-shot example check (renders the bundled example and gates it)
@@ -118,7 +149,7 @@ To eyeball the result, rasterise page one and look at it:
 pdftoppm -png -r 150 -f 1 -l 1 out/cv.pdf out/cv-preview
 ```
 
-The page-fit, AI-tell, schema, and protected-topic checks are deterministic and
-pass or fail with an exit code. The visual judgement of whether the document
-looks right is the one step a machine should not sign off alone: read the
-rasterised preview yourself.
+The page-fit, AI-tell, impact, schema, and protected-topic checks are
+deterministic and pass or fail with an exit code. The visual judgement of
+whether the document looks right is the one step a machine should not sign off
+alone: read the rasterised preview yourself.

@@ -18,8 +18,8 @@ live in a `canon.yaml` that stays on their machine and is never committed.
 
 ## What this skill guarantees
 
-A stochastic language model writes the prose, but eight gates stand
-between that prose and the delivered document. Seven pass or fail with an exit
+A stochastic language model writes the prose, but nine gates stand
+between that prose and the delivered document. Eight pass or fail with an exit
 code; one is an honest human-in-the-loop check.
 
 | Gate | What it checks | How |
@@ -29,6 +29,7 @@ code; one is an honest human-in-the-loop check.
 | ai-tell | no em dashes, double-hyphen connectors, or HTML em-dash entities | `tailored lint *.html` (deterministic) |
 | page-fit | the document fits its page budget | `tailored page-fit out.pdf --max 1` (deterministic) |
 | ats | the CV parses for ATS and covers the job's must-have keywords | `tailored ats out/cv.pdf --jd jd.yaml` (deterministic) |
+| impact | the CV survives the recruiter's six-second skim (readability floor, summary length, no duplicated sentences, at most one rhetorical contrast, consistent person, dated entries, bounded bullets) | `tailored impact cv.html` (deterministic) |
 | ip-guard | no protected topic leaks into the output | `tailored ip-guard out.html --canon canon.yaml` (deterministic) |
 | trace | every number, employer, institution, and project traces to the canon | `tailored trace cv.html --canon canon.yaml` (deterministic) |
 | visual | the document actually looks right | read the rasterised preview yourself (agent in the loop) |
@@ -36,7 +37,7 @@ code; one is an honest human-in-the-loop check.
 Be honest about that last row. The visual judgement is not automated. A render can
 pass page-fit and still look wrong: a widow, a cramped header, a section that
 breaks badly. The agent or a human reads the preview PNG and signs it off. The
-other seven gates are automatic and gate the pipeline; this one is a deliberate
+other eight gates are automatic and gate the pipeline; this one is a deliberate
 checkpoint.
 
 ## Prerequisites
@@ -123,6 +124,7 @@ candidate.
    tailored page-fit out/cv.pdf --max 1
    tailored page-fit out/cover.pdf --max 1
    tailored ats out/cv.pdf --jd jd.yaml
+   tailored impact cv.html
    tailored ip-guard cv.html --canon canon.yaml
    tailored ip-guard cover.html --canon canon.yaml
    tailored trace cv.html --canon canon.yaml
