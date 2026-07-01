@@ -33,6 +33,7 @@ skills:
 projects:
   - name: Gatehouse
     tagline: a deterministic policy layer that wraps a stochastic model in testable gates
+    year: "2024"
     links:
       - label: github.com/alexrivers/gatehouse
         url: https://github.com/alexrivers/gatehouse
@@ -41,16 +42,19 @@ projects:
       - Cut review time for generated documents by roughly two thirds by making the unhappy paths fail loudly in continuous integration rather than silently in production.
   - name: Lighthouse
     tagline: an evaluation harness that scores model changes against a frozen rubric
+    year: "2023"
     bullets:
       - Built a reproducible scoring loop so any prompt or model swap is measured against the same fixtures, giving the team a number to argue about instead of a vibe.
       - Wired the harness into the release gate so a regression in answer quality blocks the merge automatically.
   - name: Ferry
     tagline: a low-latency retrieval service for grounding answers in private documents
+    year: "2022"
     bullets:
       - Implemented a hybrid retrieval path combining keyword and vector search, tuned so the median grounded answer returns in well under a second.
       - Added per-tenant isolation so one customer's documents can never surface in another customer's results.
   - name: Almanac
     tagline: an internal tool that turns structured facts into house-style documents
+    year: "2021"
     bullets:
       - Modelled the candidate's facts as a single validated source of truth, so every generated document draws from the same place and cannot drift.
       - Shipped a privacy-first design where the source data never leaves the user's machine.

@@ -1,6 +1,6 @@
 import { z } from "zod";
 const Link = z.object({ label: z.string(), url: z.string().url() });
-const Project = z.object({ name: z.string(), tagline: z.string().optional(), links: z.array(Link).optional(), bullets: z.array(z.string()).min(1) });
+const Project = z.object({ name: z.string(), tagline: z.string().optional(), year: z.string().optional(), links: z.array(Link).optional(), bullets: z.array(z.string()).min(1) });
 const Experience = z.object({ title: z.string(), org: z.string(), location: z.string().optional(), start: z.string(), end: z.string().default("Present"), bullets: z.array(z.string()).min(1) });
 const Education = z.object({ qualification: z.string(), institution: z.string(), result: z.string().optional(), year: z.string(), note: z.string().optional() });
 const Claims = z.object({ can: z.array(z.string()).optional(), cannot: z.array(z.string()).optional() });

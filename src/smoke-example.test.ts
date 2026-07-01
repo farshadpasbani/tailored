@@ -53,6 +53,17 @@ describe("alex-rivers example", () => {
   it("passes the impact lint gate", () => {
     expect(analyzeImpact(readFileSync("examples/alex-rivers/cv.html", "utf8"), defaultImpactOptions).ok).toBe(true);
   });
+  it("every project year shown in the CV traces to the canon (nothing invented)", () => {
+    const r = loadCanon("examples/alex-rivers/canon.yaml"); expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const cv = readFileSync("examples/alex-rivers/cv.html", "utf8");
+    for (const p of r.data.projects) {
+      const entry = cv.match(new RegExp(`<div class="title">${p.name}:[\\s\\S]*?<div class="meta">([^<]*)</div>`));
+      if (!entry) continue; // a canon project the CV chose not to show
+      expect(p.year, `project ${p.name} shows a year in the CV`).toBeDefined();
+      expect(entry[1].trim(), `project ${p.name} year matches the canon`).toBe(p.year);
+    }
+  });
 });
 
 // Build-dependent integration: needs a Chrome to render and poppler to extract.
