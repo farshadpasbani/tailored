@@ -58,7 +58,9 @@ export function checkReadability(html: string, minFontPt: number, minMarginMm: n
   const fontPt = fontMatch ? Number(fontMatch[1]) : null;
 
   const pageMatch = html.match(/@page\s*{[^}]*}/i);
-  const marginMatch = pageMatch?.[0].match(/margin:\s*([^;]+);/i);
+  // CSS allows a block's final declaration to omit its semicolon, so terminate
+  // on either `;` or the closing `}` rather than requiring a trailing `;`.
+  const marginMatch = pageMatch?.[0].match(/margin:\s*([^;}]+)/i);
   const marginMm = marginMatch
     ? [...marginMatch[1].matchAll(/([\d.]+)mm/g)].map((m) => Number(m[1]))
     : [];

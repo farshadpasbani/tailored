@@ -26,6 +26,16 @@ describe("checkReadability", () => {
     expect(r.marginOk).toBe(false);
   });
 
+  it("reads the margin when the final @page declaration omits the optional semicolon", () => {
+    const html = `<style>
+      @page { size: A4; margin: 10mm 14mm }
+      body { font-size: 10pt; }
+    </style>`;
+    const r = checkReadability(html, 9, 8);
+    expect(r.marginMm).toEqual([10, 14]);
+    expect(r.ok).toBe(true);
+  });
+
   it("finds font-size on the real body rule even when an earlier 'html, body { ... }' reset rule has none", () => {
     const html = `<style>
       @page { size: A4; margin: 10mm 14mm; }
