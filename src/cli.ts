@@ -156,7 +156,8 @@ program
     const result = analyzeTrace(content, r.data, jdText);
     for (const c of result.untracedNumbers) console.error(`  untraced claim: "${c.raw}" (no matching value in the canon${opts.jdText ? " or --jd-text" : ""})`);
     for (const i of result.nameIssues) console.error(i.kind === "unknown-name" ? `  unknown name: "${i.detail}" (not in the canon)` : `  date mismatch: ${i.detail} (does not match the canon)`);
-    if (!result.ok) fail(`trace: ${result.untracedNumbers.length} untraced claim(s), ${result.nameIssues.length} name/date issue(s) in ${html}`);
+    for (const s of result.structuralIssues) console.error(`  structural: ${s}`);
+    if (!result.ok) fail(`trace: ${result.untracedNumbers.length} untraced claim(s), ${result.nameIssues.length} name/date issue(s), ${result.structuralIssues.length} structural issue(s) in ${html}`);
     console.log(`PASS: trace - every claim in ${html} traces to the canon`);
   });
 
@@ -214,7 +215,7 @@ program
     const canon = loadCanon(canonPath);
     if (!canon.ok) fail(`example canon invalid:\n  ${canon.errors.join("\n  ")}`);
     const trace = analyzeTrace(htmlContent, canon.data, "");
-    if (!trace.ok) fail(`example CV fails trace: ${trace.untracedNumbers.length} untraced claim(s), ${trace.nameIssues.length} name/date issue(s)`);
+    if (!trace.ok) fail(`example CV fails trace: ${trace.untracedNumbers.length} untraced claim(s), ${trace.nameIssues.length} name/date issue(s), ${trace.structuralIssues.length} structural issue(s)`);
     try { await renderToPdf(html, pdf); }
     catch (e) { fail((e as Error).message); }
     let res;

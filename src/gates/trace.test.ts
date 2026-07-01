@@ -177,7 +177,39 @@ describe("analyzeTrace", () => {
     if (!r.ok) throw new Error(r.errors.join("\n"));
     const html = readFileSync("examples/alex-rivers/cv.html", "utf8");
     const result = analyzeTrace(html, r.data, "");
-    expect(result).toEqual({ ok: true, untracedNumbers: [], nameIssues: [] });
+    expect(result).toEqual({ ok: true, untracedNumbers: [], nameIssues: [], structuralIssues: [] });
+  });
+
+  it("fails closed when an Experience section is present but no entry parses (markup drift)", () => {
+    // The org line gained a nested <a> tag, so the house-style extractor yields
+    // zero entries. Passing vacuously on [] would let any invented employer
+    // through; the gate must fail with a structural issue instead.
+    const drifted = `
+      <h2>Experience</h2>
+      <div class="eh">
+        <div><span class="title">Senior AI Engineer</span>, <a href="#">Meridian Labs</a></div>
+        <div class="meta">Manchester, UK · 2022–Present</div>
+      </div>
+    `;
+    const r = analyzeTrace(drifted, canon, "");
+    expect(r.ok).toBe(false);
+    expect(r.structuralIssues.some((s) => /markup may have drifted/.test(s))).toBe(true);
+  });
+
+  it("fails closed when a Projects section is present but no project name parses", () => {
+    const drifted = `
+      <h2>Selected Projects</h2>
+      <div class="entry"><div class="title"><b>Gatehouse</b>: a policy layer</div></div>
+    `;
+    const r = analyzeTrace(drifted, canon, "");
+    expect(r.ok).toBe(false);
+    expect(r.structuralIssues.some((s) => /markup may have drifted/.test(s))).toBe(true);
+  });
+
+  it("does not demand entries from a document with no experience/education/project sections", () => {
+    // A cover note has neither section; the numeric half of the gate still applies.
+    const cover = "<h1>AI Engineer</h1><p>Dear team, I lead the platform group at Meridian Labs.</p>";
+    expect(analyzeTrace(cover, canon, "").ok).toBe(true);
   });
 
   it("fails a doctored copy of the example CV with one invented metric", () => {

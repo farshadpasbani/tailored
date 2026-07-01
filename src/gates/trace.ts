@@ -101,7 +101,25 @@ export function canonCorpus(canon: Canon): string {
   return parts.join(" ");
 }
 
-export interface TraceResult { ok: boolean; untracedNumbers: NumericClaim[]; nameIssues: NameOrDateIssue[]; }
+export interface TraceResult { ok: boolean; untracedNumbers: NumericClaim[]; nameIssues: NameOrDateIssue[]; structuralIssues: string[]; }
+
+const H2_RE = /<h2[^>]*>([^<]*)<\/h2>/gi;
+
+/**
+ * Fail-closed guard against markup drift: if the document declares an
+ * experience/education or projects section heading but the house-style
+ * extractors parsed nothing from it, the name/date half of the gate would
+ * otherwise pass vacuously on []. Report that as a failure instead.
+ */
+function structuralChecks(html: string, entryCount: number, projectCount: number): string[] {
+  const headings = [...html.matchAll(H2_RE)].map((m) => m[1].trim().toLowerCase());
+  const issues: string[] = [];
+  if (headings.some((h) => /experience|education/.test(h)) && entryCount === 0)
+    issues.push("document has an experience/education section but no titled entry could be extracted; markup may have drifted from house-style");
+  if (headings.some((h) => /project/.test(h)) && projectCount === 0)
+    issues.push("document has a projects section but no project name could be extracted; markup may have drifted from house-style");
+  return issues;
+}
 
 /** Traces every checkable claim in `html` to the canon (and optionally the archived JD text). */
 export function analyzeTrace(html: string, canon: Canon, jdText: string): TraceResult {
@@ -111,5 +129,11 @@ export function analyzeTrace(html: string, canon: Canon, jdText: string): TraceR
   const entries = extractTitledEntries(html);
   const projectNames = extractProjectNames(html);
   const nameIssues = checkNamesAndDates(entries, projectNames, canon);
-  return { ok: untraced.length === 0 && nameIssues.length === 0, untracedNumbers: untraced, nameIssues };
+  const structuralIssues = structuralChecks(html, entries.length, projectNames.length);
+  return {
+    ok: untraced.length === 0 && nameIssues.length === 0 && structuralIssues.length === 0,
+    untracedNumbers: untraced,
+    nameIssues,
+    structuralIssues,
+  };
 }
