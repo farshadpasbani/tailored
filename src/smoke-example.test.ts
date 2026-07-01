@@ -8,6 +8,7 @@ import { loadJd } from "./jd/load.js";
 import { lintAiTells } from "./gates/aiTell.js";
 import { scanProtected } from "./gates/ipGuard.js";
 import { analyzeAts } from "./gates/ats.js";
+import { canonToText, analyzeFit } from "./gates/fit.js";
 import { extractPdfText } from "./gates/run.js";
 import { renderToPdf, findChrome } from "./render/chrome.js";
 
@@ -21,6 +22,23 @@ describe("alex-rivers example", () => {
     if (r.ok) for (const f of ["cv.html", "cover.html"]) expect(scanProtected(readFileSync(`examples/alex-rivers/${f}`, "utf8"), r.data.protectedTopics)).toEqual([]);
   });
   it("has a valid jd", () => { expect(loadJd("examples/alex-rivers/jd.yaml").ok).toBe(true); });
+  it("verdicts APPLY on the fit gate against its example jd", () => {
+    const canon = loadCanon("examples/alex-rivers/canon.yaml");
+    const jd = loadJd("examples/alex-rivers/jd.yaml");
+    expect(canon.ok).toBe(true);
+    expect(jd.ok).toBe(true);
+    if (!canon.ok || !jd.ok) return;
+    const r = analyzeFit(canonToText(canon.data), jd.data, { apply: 0.8, floor: 0.5 });
+    expect(r.verdict).toBe("APPLY");
+  });
+  it("verdicts SKIP when the jd's must-haves are absent from the example canon", () => {
+    const canon = loadCanon("examples/alex-rivers/canon.yaml");
+    expect(canon.ok).toBe(true);
+    if (!canon.ok) return;
+    const jd = { role: "X", mustHave: ["cobol", "fortran", "assembly"], niceToHave: [], synonyms: {} };
+    const r = analyzeFit(canonToText(canon.data), jd, { apply: 0.8, floor: 0.5 });
+    expect(r.verdict).toBe("SKIP");
+  });
 });
 
 // Build-dependent integration: needs a Chrome to render and poppler to extract.

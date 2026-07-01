@@ -194,12 +194,17 @@ program
     const jdPath = fileURLToPath(new URL("../examples/alex-rivers/jd.yaml", import.meta.url));
     const jd = loadJd(jdPath);
     if (!jd.ok) fail(`example jd invalid:\n  ${jd.errors.join("\n  ")}`);
+    const canonPath = fileURLToPath(new URL("../examples/alex-rivers/canon.yaml", import.meta.url));
+    const canon = loadCanon(canonPath);
+    if (!canon.ok) fail(`example canon invalid:\n  ${canon.errors.join("\n  ")}`);
+    const fit = analyzeFit(canonToText(canon.data), jd.data, { apply: 0.8, floor: 0.5 });
+    if (fit.verdict !== "APPLY") fail(`example candidate does not verdict APPLY on fit: ${fit.verdict}, missing ${fit.must.missing.join(", ")}`);
     let atsText: string;
     try { atsText = await extractPdfText(pdf); }
     catch (e) { fail((e as Error).message); }
     const ats = analyzeAts(atsText, jd.data, 0.8);
     if (!ats.ok) fail(`example CV fails ats: coverage ${Math.round(ats.must.ratio * 100)}%, missing ${ats.must.missing.join(", ")}`);
-    console.log(`PASS: smoke rendered ${html} to ${res.pages} page(s) (max ${res.max}), clean of AI tells, ats coverage ${Math.round(ats.must.ratio * 100)}%`);
+    console.log(`PASS: smoke rendered ${html} to ${res.pages} page(s) (max ${res.max}), fit verdict ${fit.verdict}, clean of AI tells, ats coverage ${Math.round(ats.must.ratio * 100)}%`);
   });
 
 program.parseAsync(process.argv);
