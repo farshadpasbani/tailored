@@ -18,8 +18,8 @@ live in a `canon.yaml` that stays on their machine and is never committed.
 
 ## What this skill guarantees
 
-A stochastic language model writes the prose, but six deterministic gates stand
-between that prose and the delivered document. Five pass or fail with an exit
+A stochastic language model writes the prose, but eight gates stand
+between that prose and the delivered document. Seven pass or fail with an exit
 code; one is an honest human-in-the-loop check.
 
 | Gate | What it checks | How |
@@ -30,12 +30,13 @@ code; one is an honest human-in-the-loop check.
 | page-fit | the document fits its page budget | `tailored page-fit out.pdf --max 1` (deterministic) |
 | ats | the CV parses for ATS and covers the job's must-have keywords | `tailored ats out/cv.pdf --jd jd.yaml` (deterministic) |
 | ip-guard | no protected topic leaks into the output | `tailored ip-guard out.html --canon canon.yaml` (deterministic) |
+| trace | every number, employer, institution, and project traces to the canon | `tailored trace cv.html --canon canon.yaml` (deterministic) |
 | visual | the document actually looks right | read the rasterised preview yourself (agent in the loop) |
 
 Be honest about that last row. The visual judgement is not automated. A render can
 pass page-fit and still look wrong: a widow, a cramped header, a section that
 breaks badly. The agent or a human reads the preview PNG and signs it off. The
-other five gates are automatic and gate the pipeline; this one is a deliberate
+other seven gates are automatic and gate the pipeline; this one is a deliberate
 checkpoint.
 
 ## Prerequisites
@@ -124,7 +125,17 @@ candidate.
    tailored ats out/cv.pdf --jd jd.yaml
    tailored ip-guard cv.html --canon canon.yaml
    tailored ip-guard cover.html --canon canon.yaml
+   tailored trace cv.html --canon canon.yaml
+   tailored trace cover.html --canon canon.yaml --jd-text job-description.md
    ```
+
+   `trace` makes "everything must trace to the canon" mechanical instead of a
+   prompt-only hope: it fails on a fabricated number, an employer or institution
+   or project name not in the canon, or a padded or shifted date range. A claim
+   that describes the employer rather than the candidate (a cover note quoting
+   the JD) traces against `--jd-text` instead. A failure is either a genuine
+   canon gap (go add the fact) or an invented claim (cut it); it is never a
+   licence to loosen the gate.
 
    Any non-zero exit stops the pipeline. Fix the document and re-run. Do not edit
    the gate to pass; the gate is the spec.

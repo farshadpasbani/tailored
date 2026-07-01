@@ -9,6 +9,7 @@ import { lintAiTells } from "./gates/aiTell.js";
 import { scanProtected } from "./gates/ipGuard.js";
 import { analyzeAts } from "./gates/ats.js";
 import { canonToText, analyzeFit } from "./gates/fit.js";
+import { analyzeTrace, extractTitledEntries, extractProjectNames } from "./gates/trace.js";
 import { extractPdfText } from "./gates/run.js";
 import { renderToPdf, findChrome } from "./render/chrome.js";
 
@@ -38,6 +39,15 @@ describe("alex-rivers example", () => {
     const jd = { role: "X", mustHave: ["cobol", "fortran", "assembly"], niceToHave: [], synonyms: {} };
     const r = analyzeFit(canonToText(canon.data), jd, { apply: 0.8, floor: 0.5 });
     expect(r.verdict).toBe("SKIP");
+  });
+  it("passes the trace gate: every claim in cv.html traces to its own canon", () => {
+    const r = loadCanon("examples/alex-rivers/canon.yaml"); expect(r.ok).toBe(true);
+    if (r.ok) expect(analyzeTrace(readFileSync("examples/alex-rivers/cv.html", "utf8"), r.data, "").ok).toBe(true);
+  });
+  it("actually extracts entries from the example CV (the trace pass is not vacuous)", () => {
+    const html = readFileSync("examples/alex-rivers/cv.html", "utf8");
+    expect(extractTitledEntries(html).length).toBeGreaterThanOrEqual(1);
+    expect(extractProjectNames(html).length).toBeGreaterThanOrEqual(1);
   });
 });
 
