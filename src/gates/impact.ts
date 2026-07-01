@@ -5,11 +5,19 @@
 
 import { htmlToText, countWords, lineAt } from "./text.js";
 
-/** Strip head/style/script, insert a newline at block-element boundaries, then strip remaining tags. */
+/**
+ * Strip head/style/script, insert a newline at block-element boundaries, then strip
+ * remaining tags. Unlike htmlToText, this preserves the inserted newlines (only
+ * collapsing horizontal whitespace within each line) so callers can still report
+ * which line a match came from.
+ */
 function blockText(html: string): string {
   const noHead = html.replace(/<head\b[^>]*>[\s\S]*?<\/head>/i, " ");
   const withBreaks = noHead.replace(/<\/(p|li|div|h[1-6]|section)>/gi, "\n");
-  return htmlToText(withBreaks);
+  return withBreaks
+    .split("\n")
+    .map((line) => htmlToText(line))
+    .join("\n");
 }
 
 function normalizeSentence(s: string): string {

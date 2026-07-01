@@ -76,6 +76,16 @@ describe("checkDuplicateSentences", () => {
     expect(r.duplicates[0].locations.length).toBe(2);
   });
 
+  it("reports the two locations on distinct lines, not both collapsed to line 1", () => {
+    const html = `<p class="summary">We retrieve, cite, or abstain on every grounded answer we produce.</p>
+    <p>Filler paragraph one.</p>
+    <p>Filler paragraph two.</p>
+    <li>We retrieve, cite, or abstain on every grounded answer we produce.</li>`;
+    const r = checkDuplicateSentences(html);
+    const lines = r.duplicates[0].locations.map((l) => l.line);
+    expect(new Set(lines).size).toBe(2);
+  });
+
   it("ignores short repeated fragments under the 8-word threshold", () => {
     const html = `<p>Thanks for reading.</p><li>Thanks for reading.</li>`;
     expect(checkDuplicateSentences(html).ok).toBe(true);
