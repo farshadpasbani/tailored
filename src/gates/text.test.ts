@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { lineAt, htmlToText, normalizeNumber } from "./text.js";
+import { lineAt, htmlToText, normalizeNumber, countWords } from "./text.js";
 
 describe("lineAt", () => {
   it("is 1-based and returns 1 for the first line", () => {
@@ -25,6 +25,9 @@ describe("htmlToText", () => {
     const html = "<style>.name{font-size:25pt}</style><p>Alex</p><script>var x=40;</script>";
     expect(htmlToText(html)).toBe("Alex");
   });
+  it("decodes common HTML entities", () => {
+    expect(htmlToText("Q&amp;A &lt;tag&gt; &quot;quote&quot; &#39;s&#39; a&nbsp;b")).toBe(`Q&A <tag> "quote" 's' a b`);
+  });
 });
 
 describe("normalizeNumber", () => {
@@ -38,5 +41,15 @@ describe("normalizeNumber", () => {
   });
   it("strips thousands separators", () => {
     expect(normalizeNumber("$50,000")).toBe(50_000);
+  });
+});
+
+describe("countWords", () => {
+  it("counts whitespace-separated words", () => {
+    expect(countWords("one two three")).toBe(3);
+  });
+  it("is 0 for empty or whitespace-only text", () => {
+    expect(countWords("")).toBe(0);
+    expect(countWords("   ")).toBe(0);
   });
 });

@@ -39,3 +39,9 @@ export function normalizeNumber(raw: string): number | null {
   const mag = m[2] ? MAGNITUDE[m[2].toLowerCase()] : 1;
   return base * mag;
 }
+
+/** Count whitespace-separated words in `text`. */
+export function countWords(text: string): number {
+  const t = text.trim();
+  return t === "" ? 0 : t.split(/\s+/).length;
+}
