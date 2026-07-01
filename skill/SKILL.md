@@ -18,13 +18,14 @@ live in a `canon.yaml` that stays on their machine and is never committed.
 
 ## What this skill guarantees
 
-A stochastic language model writes the prose, but five deterministic gates stand
-between that prose and the delivered document. Four pass or fail with an exit
+A stochastic language model writes the prose, but six deterministic gates stand
+between that prose and the delivered document. Five pass or fail with an exit
 code; one is an honest human-in-the-loop check.
 
 | Gate | What it checks | How |
 | --- | --- | --- |
 | schema | the canon is well formed | `tailored validate canon.yaml` (deterministic) |
+| fit | the canon covers the job's must-haves well enough to be worth writing anything | `tailored fit --jd jd.yaml --canon canon.yaml` (deterministic) |
 | ai-tell | no em dashes, double-hyphen connectors, or HTML em-dash entities | `tailored lint *.html` (deterministic) |
 | page-fit | the document fits its page budget | `tailored page-fit out.pdf --max 1` (deterministic) |
 | ats | the CV parses for ATS and covers the job's must-have keywords | `tailored ats out/cv.pdf --jd jd.yaml` (deterministic) |
@@ -34,7 +35,7 @@ code; one is an honest human-in-the-loop check.
 Be honest about that last row. The visual judgement is not automated. A render can
 pass page-fit and still look wrong: a widow, a cramped header, a section that
 breaks badly. The agent or a human reads the preview PNG and signs it off. The
-other four gates are automatic and gate the pipeline; this one is a deliberate
+other five gates are automatic and gate the pipeline; this one is a deliberate
 checkpoint.
 
 ## Prerequisites
@@ -90,15 +91,29 @@ candidate.
    trace to a fact in the canon. Do not invent employers, dates, metrics, or
    results.
 
-3. **Grill the gaps.** Where the role needs something the canon does not yet
+3. **Triage fit before writing anything.** Run `tailored fit --jd jd.yaml --canon
+   canon.yaml`. The odds per application matter less than the odds per hour, so
+   this gate spends nothing on a role the canon plainly cannot cover:
+
+   ```sh
+   tailored fit --jd jd.yaml --canon canon.yaml
+   ```
+
+   On **SKIP**, stop and tell the user why, listing the uncovered must-haves.
+   On **APPLY-WITH-GAPS**, surface each uncovered must-have as a grill question
+   before authoring a word: either the canon genuinely lacks it (a real fit gap
+   to raise with the candidate) or it is phrased differently (canon evidence to
+   surface), never a licence to fabricate. On **APPLY**, continue.
+
+4. **Grill the gaps.** Where the role needs something the canon does not yet
    state, ask the user rather than guessing. Fill the gap in the canon, do not
    fabricate it in the document.
 
-4. **Author the documents.** Write `cv.html` and `cover.html` in the house style
+5. **Author the documents.** Write `cv.html` and `cover.html` in the house style
    (see `references/house-style.md`). Match the role's language to the
    candidate's real evidence. British spelling. No AI tells. CV to one page.
 
-5. **Run the gates.**
+6. **Run the gates.**
 
    ```sh
    tailored render cv.html out/cv.pdf
@@ -114,7 +129,7 @@ candidate.
    Any non-zero exit stops the pipeline. Fix the document and re-run. Do not edit
    the gate to pass; the gate is the spec.
 
-6. **Verify by eye.** Rasterise and look:
+7. **Verify by eye.** Rasterise and look:
 
    ```sh
    pdftoppm -png -r 150 -f 1 -l 1 out/cv.pdf out/cv-preview
@@ -123,7 +138,7 @@ candidate.
    Read the preview. Check the header, the spacing, the line breaks, and whether
    the tailoring actually lands. This is the human-in-the-loop gate.
 
-7. **Deliver.** Hand over the PDFs, the CV and cover note alongside the archived
+8. **Deliver.** Hand over the PDFs, the CV and cover note alongside the archived
    `job-description.pdf`, all in the same folder. The rendered output and the
    canon stay on the user's machine.
 
