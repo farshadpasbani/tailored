@@ -146,6 +146,32 @@ describe("canonCorpus", () => {
     const c: Canon = { ...canon, experience: [{ ...canon.experience[0], bullets: ["Cut review time by 40%."] }] };
     expect(canonCorpus(c)).toContain("40%");
   });
+
+  // Uses Ofcom's reserved fictional London landline (020 7946 0958), not a real
+  // subscriber number, so the no-personal-data guard doesn't flag this fixture.
+  it("includes identity.phone, identity.email, and identity.location", () => {
+    const c: Canon = { ...canon, identity: { ...canon.identity, phone: "+44 20 7946 0958", email: "alex@example.com", location: "Manchester, UK" } };
+    const corpus = canonCorpus(c);
+    expect(corpus).toContain("+44 20 7946 0958");
+    expect(corpus).toContain("alex@example.com");
+    expect(corpus).toContain("Manchester, UK");
+  });
+});
+
+describe("analyzeTrace: identity contact details", () => {
+  const canonWithPhone: Canon = { ...canon, identity: { ...canon.identity, phone: "+44 20 7946 0958" } };
+  const htmlWithPhone = `<header><div class="contact"><span>+44 20 7946 0958</span></div></header>`;
+
+  it("traces the candidate's phone number printed in the CV header to the canon", () => {
+    const r = analyzeTrace(htmlWithPhone, canonWithPhone, "");
+    expect(r.untracedNumbers).toEqual([]);
+  });
+
+  it("still fails a phone number that does not match the canon's phone", () => {
+    const htmlWithWrongPhone = `<header><div class="contact"><span>+44 20 1234 5678</span></div></header>`;
+    const r = analyzeTrace(htmlWithWrongPhone, canonWithPhone, "");
+    expect(r.untracedNumbers.length).toBeGreaterThan(0);
+  });
 });
 
 describe("analyzeTrace", () => {
