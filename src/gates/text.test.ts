@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { lineAt } from "./text.js";
+import { lineAt, htmlToText, normalizeNumber } from "./text.js";
 
 describe("lineAt", () => {
   it("is 1-based and returns 1 for the first line", () => {
@@ -14,5 +14,29 @@ describe("lineAt", () => {
   it("reports the line of the newline character itself as the line it ends", () => {
     // index of the first '\n' is still on line 1
     expect(lineAt("a\nb", 1)).toBe(1);
+  });
+});
+
+describe("htmlToText", () => {
+  it("strips tags, leaving the rendered text", () => {
+    expect(htmlToText("<p>Hello <b>world</b></p>")).toBe("Hello world");
+  });
+  it("drops style and script contents entirely, not just the tags", () => {
+    const html = "<style>.name{font-size:25pt}</style><p>Alex</p><script>var x=40;</script>";
+    expect(htmlToText(html)).toBe("Alex");
+  });
+});
+
+describe("normalizeNumber", () => {
+  it("treats a bare percentage and its bare number as the same value", () => {
+    expect(normalizeNumber("40%")).toBe(40);
+    expect(normalizeNumber("40")).toBe(40);
+  });
+  it("expands a currency amount with a magnitude suffix", () => {
+    expect(normalizeNumber("£1.2m")).toBe(1_200_000);
+    expect(normalizeNumber("1200000")).toBe(1_200_000);
+  });
+  it("strips thousands separators", () => {
+    expect(normalizeNumber("$50,000")).toBe(50_000);
   });
 });
