@@ -94,7 +94,14 @@ export function checkNamesAndDates(entries: TitledEntry[], projectNames: string[
 
 /** Every fact-bearing text field in the canon, joined into one corpus a claim can trace to. */
 export function canonCorpus(canon: Canon): string {
-  const parts: string[] = [canon.identity.name, canon.identity.role, canon.summary ?? ""];
+  const parts: string[] = [
+    canon.identity.name,
+    canon.identity.role,
+    canon.identity.phone ?? "",
+    canon.identity.email ?? "",
+    canon.identity.location ?? "",
+    canon.summary ?? "",
+  ];
   for (const s of canon.skills) parts.push(s.label, s.value);
   for (const p of canon.projects) parts.push(p.name, p.tagline ?? "", ...p.bullets);
   for (const e of canon.experience) parts.push(e.title, e.org, e.start, e.end, ...e.bullets);
