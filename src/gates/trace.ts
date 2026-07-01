@@ -5,7 +5,7 @@ export interface NumericClaim { raw: string; index: number; value: number; }
 
 const YEAR_RE = /^(19|20)\d{2}$/;
 // Currency (with optional k/m/bn magnitude), percentage, or a plain multi-digit count.
-const CLAIM_RE = /[£$€]\s?\d[\d,]*(?:\.\d+)?\s?(?:k|m|bn)?\b|\d+(?:\.\d+)?%|\b\d[\d,]*(?:\.\d+)?\b/gi;
+const CLAIM_RE = /[£$€]\s?\d[\d,]*(?:\.\d+)?(?:\s?(?:k|m|bn))?\b|\d+(?:\.\d+)?%|\b\d[\d,]*(?:\.\d+)?\b/gi;
 
 /** Every checkable number in `text`: percentages, currency amounts, and plain counts. Bare years are left to the date-range check. */
 export function extractNumericClaims(text: string): NumericClaim[] {

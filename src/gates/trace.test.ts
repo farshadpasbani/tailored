@@ -21,6 +21,10 @@ describe("extractNumericClaims", () => {
     const r = extractNumericClaims("raised £1.2m in funding");
     expect(r).toEqual([{ raw: "£1.2m", index: 7, value: 1_200_000 }]);
   });
+  it("does not swallow the trailing space when there is no magnitude suffix", () => {
+    const r = extractNumericClaims("raised $1,234.99 instead");
+    expect(r).toEqual([{ raw: "$1,234.99", index: 7, value: 1234.99 }]);
+  });
   it("finds a plain count", () => {
     const r = extractNumericClaims("mentor 3 engineers");
     expect(r).toEqual([{ raw: "3", index: 7, value: 3 }]);
