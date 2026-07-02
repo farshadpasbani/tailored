@@ -82,6 +82,30 @@ shape Experience already uses). An undated entry gives neither a recruiter nor
 a recency-computing ATS a way to tell 2019 work from last month's; the
 `tailored impact` gate fails it.
 
+## Markup the trace parser requires (the three common drift points)
+
+The `tailored trace` parsers read the canon out of exact markup shapes. Author
+to these shapes; do not reshape them and expect the gate to keep up. Real packs
+have drifted from all three below, so each is a structural failure, not a style
+nit.
+
+1. **Experience and education title line is `Title, Org` only.** Render it as
+   `<div><span class="title">Senior AI Engineer</span>, Meridian Labs</div>`,
+   with the location and dates in the following `.meta` div (e.g.
+   `<div class="meta">Manchester, UK · 2022–Present</div>`). Do NOT put the
+   location on the title line (`…</span>, Meridian Labs · Manchester`): the
+   parser captures everything after the comma as the org, so `Meridian Labs ·
+   Manchester` never matches the canon's `Meridian Labs` and the entry reads as
+   an unknown employer.
+2. **Project entries join name and tagline with a colon inside one `.title`
+   div:** `<div class="title">Gatehouse: a deterministic policy layer…</div>`
+   (optionally wrapped in an `.eh` header for the dated form). Do NOT use
+   `<div><span class="title">Gatehouse</span>: …</div>` or nest tags before the
+   colon (`<b>Gatehouse</b>:`): the parser extracts no project name and the
+   projects section fails closed as drifted markup.
+3. **Bullets stay within the impact bound of 45 words** (see below). Bullets of
+   55–70 words fail `tailored impact`; write to the bound, do not trim after.
+
 ## Recruiter-skim discipline
 
 The `tailored impact` gate holds the authored HTML to the six-second skim, not

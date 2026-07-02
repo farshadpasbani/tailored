@@ -79,9 +79,12 @@ export function checkNamesAndDates(entries: TitledEntry[], projectNames: string[
       if (!dateRe.test(entry.meta)) issues.push({ kind: "bad-date", detail: `${entry.org}: ${entry.meta.replace(/^[^0-9]*/, "")}` });
       continue;
     }
-    const edu = canon.education.find((e) => eq(e.institution, entry.org));
-    if (edu) {
-      if (!entry.meta.includes(edu.year)) issues.push({ kind: "bad-date", detail: `${entry.org}: ${entry.meta}` });
+    // An institution can appear more than once (two degrees at one university).
+    // Match the entry's rendered year against ANY degree there, rather than the
+    // first — otherwise a second degree's year is wrongly flagged against the first.
+    const edus = canon.education.filter((e) => eq(e.institution, entry.org));
+    if (edus.length) {
+      if (!edus.some((e) => entry.meta.includes(e.year))) issues.push({ kind: "bad-date", detail: `${entry.org}: ${entry.meta}` });
       continue;
     }
     issues.push({ kind: "unknown-name", detail: entry.org });
@@ -94,7 +97,14 @@ export function checkNamesAndDates(entries: TitledEntry[], projectNames: string[
 
 /** Every fact-bearing text field in the canon, joined into one corpus a claim can trace to. */
 export function canonCorpus(canon: Canon): string {
-  const parts: string[] = [canon.identity.name, canon.identity.role, canon.summary ?? ""];
+  const parts: string[] = [
+    canon.identity.name,
+    canon.identity.role,
+    canon.identity.phone ?? "",
+    canon.identity.email ?? "",
+    canon.identity.location ?? "",
+    canon.summary ?? "",
+  ];
   for (const s of canon.skills) parts.push(s.label, s.value);
   for (const p of canon.projects) parts.push(p.name, p.tagline ?? "", ...p.bullets);
   for (const e of canon.experience) parts.push(e.title, e.org, e.start, e.end, ...e.bullets);

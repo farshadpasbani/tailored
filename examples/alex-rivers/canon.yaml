@@ -5,6 +5,7 @@ identity:
   role: AI Engineer
   location: Manchester, UK
   email: alex.rivers@example.com
+  phone: "+44 7700 900123"
   links:
     - label: github.com/alexrivers
       url: https://github.com/alexrivers

@@ -139,12 +139,47 @@ describe("checkNamesAndDates", () => {
     const r = checkNamesAndDates([], ["Skyforge"], canon);
     expect(r).toEqual([{ kind: "unknown-name", detail: "Skyforge" }]);
   });
+  it("passes two degrees at the same institution, matching each entry's year against any degree there", () => {
+    const twoDegrees: Canon = {
+      ...canon,
+      education: [
+        { qualification: "MSc Structural Engineering", institution: "Bahonar University, Iran", year: "2019" },
+        { qualification: "BSc (Hons) Civil Engineering", institution: "Bahonar University, Iran", year: "2016" },
+      ],
+    };
+    const entries = [
+      { title: "MSc Structural Engineering", org: "Bahonar University, Iran", meta: "Distinction · 2019" },
+      { title: "BSc (Hons) Civil Engineering", org: "Bahonar University, Iran", meta: "2016" },
+    ];
+    expect(checkNamesAndDates(entries, [], twoDegrees)).toEqual([]);
+  });
+  it("still flags a year matching no degree at a multi-degree institution", () => {
+    const twoDegrees: Canon = {
+      ...canon,
+      education: [
+        { qualification: "MSc Structural Engineering", institution: "Bahonar University, Iran", year: "2019" },
+        { qualification: "BSc (Hons) Civil Engineering", institution: "Bahonar University, Iran", year: "2016" },
+      ],
+    };
+    const entries = [{ title: "BSc (Hons) Civil Engineering", org: "Bahonar University, Iran", meta: "2014" }];
+    expect(checkNamesAndDates(entries, [], twoDegrees)).toEqual([{ kind: "bad-date", detail: "Bahonar University, Iran: 2014" }]);
+  });
 });
 
 describe("canonCorpus", () => {
   it("joins the canon's textual fields, including experience bullets", () => {
     const c: Canon = { ...canon, experience: [{ ...canon.experience[0], bullets: ["Cut review time by 40%."] }] };
     expect(canonCorpus(c)).toContain("40%");
+  });
+  it("includes identity phone, email, and location so their contents can trace", () => {
+    const c: Canon = {
+      ...canon,
+      identity: { name: "Alex Rivers", role: "AI Engineer", phone: "+44 7700 900123", email: "alex@example.com", location: "Manchester, UK" },
+    };
+    const corpus = canonCorpus(c);
+    expect(corpus).toContain("+44 7700 900123");
+    expect(corpus).toContain("alex@example.com");
+    expect(corpus).toContain("Manchester, UK");
   });
 });
 
@@ -164,6 +199,16 @@ describe("analyzeTrace", () => {
     const r = analyzeTrace(doctored, canon, "");
     expect(r.ok).toBe(false);
     expect(r.untracedNumbers.map((c) => c.raw)).toContain("47%");
+  });
+  it("traces a phone number's digit-groups only because identity.phone is in the corpus", () => {
+    // A phone number in the CV header has its digit-groups (44, 7700, 900123)
+    // extracted as numeric claims. They can only trace once identity.phone is
+    // part of the canon corpus; before that fix they surface as untraced.
+    const c: Canon = { ...canon, identity: { name: "Alex Rivers", role: "AI Engineer", phone: "+44 7700 900123" } };
+    const html = goodHtml + `<div class="contact"><span>+44 7700 900123</span></div>`;
+    const r = analyzeTrace(html, c, "");
+    expect(r.untracedNumbers).toEqual([]);
+    expect(r.ok).toBe(true);
   });
   it("fails a document with an employer not in the canon", () => {
     const doctored = goodHtml.replace("Meridian Labs", "Kryotech Solutions");
