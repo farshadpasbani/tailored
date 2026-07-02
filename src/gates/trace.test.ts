@@ -139,6 +139,31 @@ describe("checkNamesAndDates", () => {
     const r = checkNamesAndDates([], ["Skyforge"], canon);
     expect(r).toEqual([{ kind: "unknown-name", detail: "Skyforge" }]);
   });
+  it("passes two degrees at the same institution, matching each entry's year against any degree there", () => {
+    const twoDegrees: Canon = {
+      ...canon,
+      education: [
+        { qualification: "MSc Structural Engineering", institution: "Bahonar University, Iran", year: "2019" },
+        { qualification: "BSc (Hons) Civil Engineering", institution: "Bahonar University, Iran", year: "2016" },
+      ],
+    };
+    const entries = [
+      { title: "MSc Structural Engineering", org: "Bahonar University, Iran", meta: "Distinction · 2019" },
+      { title: "BSc (Hons) Civil Engineering", org: "Bahonar University, Iran", meta: "2016" },
+    ];
+    expect(checkNamesAndDates(entries, [], twoDegrees)).toEqual([]);
+  });
+  it("still flags a year matching no degree at a multi-degree institution", () => {
+    const twoDegrees: Canon = {
+      ...canon,
+      education: [
+        { qualification: "MSc Structural Engineering", institution: "Bahonar University, Iran", year: "2019" },
+        { qualification: "BSc (Hons) Civil Engineering", institution: "Bahonar University, Iran", year: "2016" },
+      ],
+    };
+    const entries = [{ title: "BSc (Hons) Civil Engineering", org: "Bahonar University, Iran", meta: "2014" }];
+    expect(checkNamesAndDates(entries, [], twoDegrees)).toEqual([{ kind: "bad-date", detail: "Bahonar University, Iran: 2014" }]);
+  });
 });
 
 describe("canonCorpus", () => {
