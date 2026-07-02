@@ -146,6 +146,16 @@ describe("canonCorpus", () => {
     const c: Canon = { ...canon, experience: [{ ...canon.experience[0], bullets: ["Cut review time by 40%."] }] };
     expect(canonCorpus(c)).toContain("40%");
   });
+  it("includes identity phone, email, and location so their contents can trace", () => {
+    const c: Canon = {
+      ...canon,
+      identity: { name: "Alex Rivers", role: "AI Engineer", phone: "+44 7700 900123", email: "alex@example.com", location: "Manchester, UK" },
+    };
+    const corpus = canonCorpus(c);
+    expect(corpus).toContain("+44 7700 900123");
+    expect(corpus).toContain("alex@example.com");
+    expect(corpus).toContain("Manchester, UK");
+  });
 });
 
 describe("analyzeTrace", () => {
@@ -164,6 +174,16 @@ describe("analyzeTrace", () => {
     const r = analyzeTrace(doctored, canon, "");
     expect(r.ok).toBe(false);
     expect(r.untracedNumbers.map((c) => c.raw)).toContain("47%");
+  });
+  it("traces a phone number's digit-groups only because identity.phone is in the corpus", () => {
+    // A phone number in the CV header has its digit-groups (44, 7700, 900123)
+    // extracted as numeric claims. They can only trace once identity.phone is
+    // part of the canon corpus; before that fix they surface as untraced.
+    const c: Canon = { ...canon, identity: { name: "Alex Rivers", role: "AI Engineer", phone: "+44 7700 900123" } };
+    const html = goodHtml + `<div class="contact"><span>+44 7700 900123</span></div>`;
+    const r = analyzeTrace(html, c, "");
+    expect(r.untracedNumbers).toEqual([]);
+    expect(r.ok).toBe(true);
   });
   it("fails a document with an employer not in the canon", () => {
     const doctored = goodHtml.replace("Meridian Labs", "Kryotech Solutions");
