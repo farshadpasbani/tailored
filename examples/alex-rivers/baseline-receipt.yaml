@@ -1,0 +1,7 @@
+schemaVersion: 1
+action: freeze-requirements
+issuedAt: "2026-07-12T12:00:00.000Z"
+issuer: example-release
+archivedJdSha256: 9c93a170a2a18a4d7955914bc282d67d87f4407164b5116461fc81ee07bb2dc9
+baselineSha256: 22721ad9b16f093df8e4cf510ee52fcdd02c08ccb70a0f2bf295a8f7e10474cb
+sha256: fafeea726779b5b7ea6af552ed6411872057f46d861fc5601851ebe78cf313a1

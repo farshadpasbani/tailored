@@ -1,5 +1,7 @@
 # Fictional worked example. Alex Rivers does not exist.
 # This is the kind of file a real user keeps PRIVATE and gitignored.
+schemaVersion: 2
+
 identity:
   name: Alex Rivers
   role: AI Engineer
@@ -33,6 +35,7 @@ skills:
 projects:
   - name: Gatehouse
     tagline: a deterministic policy layer that wraps a stochastic model in testable gates
+    year: "2024"
     links:
       - label: github.com/alexrivers/gatehouse
         url: https://github.com/alexrivers/gatehouse
@@ -41,16 +44,19 @@ projects:
       - Cut review time for generated documents by roughly two thirds by making the unhappy paths fail loudly in continuous integration rather than silently in production.
   - name: Lighthouse
     tagline: an evaluation harness that scores model changes against a frozen rubric
+    year: "2023"
     bullets:
       - Built a reproducible scoring loop so any prompt or model swap is measured against the same fixtures, giving the team a number to argue about instead of a vibe.
       - Wired the harness into the release gate so a regression in answer quality blocks the merge automatically.
   - name: Ferry
     tagline: a low-latency retrieval service for grounding answers in private documents
+    year: "2022"
     bullets:
       - Implemented a hybrid retrieval path combining keyword and vector search, tuned so the median grounded answer returns in well under a second.
       - Added per-tenant isolation so one customer's documents can never surface in another customer's results.
   - name: Almanac
     tagline: an internal tool that turns structured facts into house-style documents
+    year: "2021"
     bullets:
       - Modelled the candidate's facts as a single validated source of truth, so every generated document draws from the same place and cannot drift.
       - Shipped a privacy-first design where the source data never leaves the user's machine.
@@ -99,5 +105,91 @@ claims:
     - Speak in detail about evaluation harnesses, guardrail design, and retrieval systems built in the open.
     - Describe the architecture and results of the public Gatehouse and Lighthouse projects.
   cannot:
-    - Disclose anything about Project Titan or Northwind Confidential, which are covered by confidentiality terms.
-    - Share client names, internal metrics, or unpublished figures from previous employers.
+    - id: prohibition-project-confidentiality
+      statement: Disclose anything about Project Titan or Northwind Confidential, which are covered by confidentiality terms.
+      concepts: [internal-ip]
+    - id: prohibition-employer-ip
+      statement: Share client names, internal metrics, or unpublished figures from previous employers.
+      concepts: [internal-ip]
+
+facts:
+  - id: fact-production-llm
+    statement: Alex has shipped language-model features into production at Meridian Labs.
+    kind: experience
+    subject: production language-model features
+    provenance: { type: candidate-attested, source: fictional example canon }
+    verifiedOn: "2026-07-12"
+    status: candidate-attested
+    confidence: 1
+    allowedUses: [cv, cover, fit]
+    sensitivity: public
+  - id: fact-evaluation-infrastructure
+    statement: Alex built Lighthouse, an evaluation harness wired into a release gate.
+    kind: project
+    subject: evaluation and testing infrastructure
+    provenance: { type: candidate-attested, source: fictional example canon }
+    verifiedOn: "2026-07-12"
+    status: candidate-attested
+    confidence: 1
+    allowedUses: [cv, cover, fit]
+    sensitivity: public
+  - id: fact-typescript-python
+    statement: Alex uses TypeScript and Python and has owned backend services.
+    kind: skill
+    subject: TypeScript, Python, and backend services
+    provenance: { type: candidate-attested, source: fictional example canon }
+    verifiedOn: "2026-07-12"
+    status: candidate-attested
+    confidence: 1
+    allowedUses: [cv, cover, fit]
+    sensitivity: public
+  - id: fact-deterministic-design
+    statement: Alex designed deterministic, testable gates around stochastic model output in Gatehouse.
+    kind: project
+    subject: deterministic design
+    provenance: { type: candidate-attested, source: fictional example canon }
+    verifiedOn: "2026-07-12"
+    status: candidate-attested
+    confidence: 1
+    allowedUses: [cv, cover, fit]
+    sensitivity: public
+  - id: fact-privacy
+    statement: Alex shipped per-tenant isolation and local-only source-data handling.
+    kind: project
+    subject: privacy and data handling
+    provenance: { type: candidate-attested, source: fictional example canon }
+    verifiedOn: "2026-07-12"
+    status: candidate-attested
+    confidence: 1
+    allowedUses: [cv, cover, fit]
+    sensitivity: public
+  - id: fact-rag
+    statement: Alex implemented hybrid retrieval for grounding answers in private documents.
+    kind: project
+    subject: retrieval-augmented generation
+    provenance: { type: candidate-attested, source: fictional example canon }
+    verifiedOn: "2026-07-12"
+    status: candidate-attested
+    confidence: 1
+    allowedUses: [cv, cover, fit]
+    sensitivity: public
+  - id: fact-open-source
+    statement: Alex publishes the Gatehouse project as open-source work.
+    kind: project
+    subject: open-source work
+    provenance: { type: candidate-attested, source: fictional example canon }
+    verifiedOn: "2026-07-12"
+    status: candidate-attested
+    confidence: 1
+    allowedUses: [cv, cover, fit]
+    sensitivity: public
+  - id: fact-mentoring
+    statement: Alex mentors three engineers and runs a weekly design review.
+    kind: experience
+    subject: mentoring
+    provenance: { type: candidate-attested, source: fictional example canon }
+    verifiedOn: "2026-07-12"
+    status: candidate-attested
+    confidence: 1
+    allowedUses: [cv, cover, fit]
+    sensitivity: public

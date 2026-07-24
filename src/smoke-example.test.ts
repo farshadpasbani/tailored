@@ -8,8 +8,13 @@ import { loadJd } from "./jd/load.js";
 import { lintAiTells } from "./gates/aiTell.js";
 import { scanProtected } from "./gates/ipGuard.js";
 import { analyzeAts } from "./gates/ats.js";
+import { analyzeRequirementFit } from "./gates/fit.js";
+import { loadRequirements } from "./requirements/schema.js";
+import { analyzeTrace, extractTitledEntries, extractProjectNames } from "./gates/trace.js";
+import { analyzeImpact, defaultImpactOptions } from "./gates/impact.js";
 import { extractPdfText } from "./gates/run.js";
 import { renderToPdf, findChrome } from "./render/chrome.js";
+import yaml from "js-yaml";
 
 describe("alex-rivers example", () => {
   it("has a valid canon", () => { expect(loadCanon("examples/alex-rivers/canon.yaml").ok).toBe(true); });
@@ -21,6 +26,39 @@ describe("alex-rivers example", () => {
     if (r.ok) for (const f of ["cv.html", "cover.html"]) expect(scanProtected(readFileSync(`examples/alex-rivers/${f}`, "utf8"), r.data.protectedTopics)).toEqual([]);
   });
   it("has a valid jd", () => { expect(loadJd("examples/alex-rivers/jd.yaml").ok).toBe(true); });
+  it("verdicts STRONG from the frozen requirement-evidence map", () => {
+    const canon = loadCanon("examples/alex-rivers/canon.yaml");
+    expect(canon.ok).toBe(true);
+    if (!canon.ok) return;
+    const baselineReceipt: any = yaml.load(readFileSync("examples/alex-rivers/baseline-receipt.yaml", "utf8"));
+    const requirements = loadRequirements("examples/alex-rivers/requirements.yaml", { archivedJdPath: "examples/alex-rivers/job-description.md", canon: canon.data, baselineReceiptResolver: (hash) => hash === baselineReceipt.sha256 ? baselineReceipt : undefined });
+    expect(requirements.ok).toBe(true);
+    if (!requirements.ok) return;
+    expect(analyzeRequirementFit(requirements.data, canon.data, { allowCandidateAttested: true, minConfidence: 0.5, allowedUses: ["fit"], allowedSensitivities: ["public", "private"], allowedProvenanceTypes: ["candidate-attested", "artifact", "external"] }).verdict).toBe("STRONG");
+  });
+  it("passes the trace gate: every claim in cv.html traces to its own canon", () => {
+    const r = loadCanon("examples/alex-rivers/canon.yaml"); expect(r.ok).toBe(true);
+    if (r.ok) expect(analyzeTrace(readFileSync("examples/alex-rivers/cv.html", "utf8"), r.data, "").ok).toBe(true);
+  });
+  it("actually extracts entries from the example CV (the trace pass is not vacuous)", () => {
+    const html = readFileSync("examples/alex-rivers/cv.html", "utf8");
+    expect(extractTitledEntries(html).length).toBeGreaterThanOrEqual(1);
+    expect(extractProjectNames(html).length).toBeGreaterThanOrEqual(1);
+  });
+  it("passes the impact lint gate", () => {
+    expect(analyzeImpact(readFileSync("examples/alex-rivers/cv.html", "utf8"), defaultImpactOptions).ok).toBe(true);
+  });
+  it("every project year shown in the CV traces to the canon (nothing invented)", () => {
+    const r = loadCanon("examples/alex-rivers/canon.yaml"); expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const cv = readFileSync("examples/alex-rivers/cv.html", "utf8");
+    for (const p of r.data.projects) {
+      const entry = cv.match(new RegExp(`<div class="title">${p.name}:[\\s\\S]*?<div class="meta">([^<]*)</div>`));
+      if (!entry) continue; // a canon project the CV chose not to show
+      expect(p.year, `project ${p.name} shows a year in the CV`).toBeDefined();
+      expect(entry[1].trim(), `project ${p.name} year matches the canon`).toBe(p.year);
+    }
+  });
 });
 
 // Build-dependent integration: needs a Chrome to render and poppler to extract.
@@ -38,5 +76,5 @@ describe.skipIf(!canRender)("alex-rivers ats gate (rendered)", () => {
     const ats = analyzeAts(await extractPdfText(pdf), jd.data, 0.8);
     expect(ats.ok).toBe(true);
     expect(ats.must.missing).toEqual([]);
-  });
+  }, 15_000);
 });

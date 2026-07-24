@@ -1,0 +1,99 @@
+schemaVersion: 2
+role: AI Engineer, Trustworthy Systems
+company: Halyard
+archivedJd:
+  sha256: 9c93a170a2a18a4d7955914bc282d67d87f4407164b5116461fc81ee07bb2dc9
+frozenAt: "2026-07-12T12:00:00.000Z"
+requirements:
+  - id: req-production-llm
+    source: { quote: "Strong experience shipping language-model features into production.", location: "What we are looking for, bullet 1", span: { start: 637, end: 704 } }
+    classification: { frozen: hard, current: hard }
+    weight: 3
+    eligibilityImpact: none
+    ats:
+      literals:
+        - { term: language-model features, source: { quote: language-model features, location: "What we are looking for, bullet 1", span: { start: 664, end: 687 } } }
+        - { term: production, source: { quote: production, location: "What we are looking for, bullet 1", span: { start: 693, end: 703 } } }
+      aliases: []
+    evidence: { kind: direct, factIds: [fact-production-llm] }
+  - id: req-evaluation
+    source: { quote: "A track record of building evaluation and testing infrastructure, not just using it.", location: "What we are looking for, bullet 2", span: { start: 707, end: 791 } }
+    classification: { frozen: hard, current: hard }
+    weight: 3
+    eligibilityImpact: none
+    ats:
+      literals:
+        - { term: evaluation, source: { quote: evaluation, location: "What we are looking for, bullet 2", span: { start: 734, end: 744 } } }
+        - { term: testing infrastructure, source: { quote: testing infrastructure, location: "What we are looking for, bullet 2", span: { start: 749, end: 771 } } }
+      aliases: []
+    evidence: { kind: direct, factIds: [fact-evaluation-infrastructure] }
+  - id: req-languages
+    source: { quote: "Fluency in TypeScript or Python and comfort owning backend services.", location: "What we are looking for, bullet 3", span: { start: 794, end: 862 } }
+    classification: { frozen: hard, current: hard }
+    weight: 3
+    eligibilityImpact: none
+    ats:
+      literals:
+        - { term: TypeScript, source: { quote: TypeScript, location: "What we are looking for, bullet 3", span: { start: 805, end: 815 } } }
+        - { term: Python, source: { quote: Python, location: "What we are looking for, bullet 3", span: { start: 819, end: 825 } } }
+        - { term: backend services, source: { quote: backend services, location: "What we are looking for, bullet 3", span: { start: 845, end: 861 } } }
+      aliases: []
+    evidence: { kind: direct, factIds: [fact-typescript-python] }
+  - id: req-deterministic
+    source: { quote: "A bias toward deterministic, testable design around stochastic components.", location: "What we are looking for, bullet 4", span: { start: 865, end: 939 } }
+    classification: { frozen: hard, current: hard }
+    weight: 3
+    eligibilityImpact: none
+    ats:
+      literals:
+        - { term: deterministic, source: { quote: deterministic, location: "What we are looking for, bullet 4", span: { start: 879, end: 892 } } }
+        - { term: testable design, source: { quote: testable design, location: "What we are looking for, bullet 4", span: { start: 894, end: 909 } } }
+      aliases: []
+    evidence: { kind: direct, factIds: [fact-deterministic-design] }
+  - id: req-privacy
+    source: { quote: "Care for privacy and data handling.", location: "What we are looking for, bullet 5", span: { start: 942, end: 977 } }
+    classification: { frozen: hard, current: hard }
+    weight: 2
+    eligibilityImpact: none
+    ats:
+      literals:
+        - { term: privacy, source: { quote: privacy, location: "What we are looking for, bullet 5", span: { start: 951, end: 958 } } }
+        - { term: data handling, source: { quote: data handling, location: "What we are looking for, bullet 5", span: { start: 963, end: 976 } } }
+      aliases: []
+    evidence: { kind: direct, factIds: [fact-privacy] }
+  - id: req-rag
+    source: { quote: "Retrieval-augmented generation experience.", location: "Nice to have, bullet 1", span: { start: 998, end: 1040 } }
+    classification: { frozen: preferred, current: preferred }
+    weight: 1
+    eligibilityImpact: none
+    ats:
+      literals:
+        - { term: Retrieval-augmented generation, source: { quote: Retrieval-augmented generation, location: "Nice to have, bullet 1", span: { start: 998, end: 1028 } } }
+      aliases:
+        - { term: RAG, forLiteral: Retrieval-augmented generation, reason: Common industry abbreviation }
+    evidence: { kind: direct, factIds: [fact-rag] }
+  - id: req-open-source
+    source: { quote: "Open-source work we can read.", location: "Nice to have, bullet 2", span: { start: 1043, end: 1072 } }
+    classification: { frozen: preferred, current: preferred }
+    weight: 1
+    eligibilityImpact: none
+    ats:
+      literals:
+        - { term: Open-source, source: { quote: Open-source, location: "Nice to have, bullet 2", span: { start: 1043, end: 1054 } } }
+      aliases: []
+    evidence: { kind: direct, factIds: [fact-open-source] }
+  - id: req-mentoring
+    source: { quote: "Experience mentoring other engineers.", location: "Nice to have, bullet 3", span: { start: 1075, end: 1112 } }
+    classification: { frozen: preferred, current: preferred }
+    weight: 1
+    eligibilityImpact: none
+    ats:
+      literals:
+        - { term: mentoring, source: { quote: mentoring, location: "Nice to have, bullet 3", span: { start: 1086, end: 1095 } } }
+      aliases: []
+    evidence: { kind: direct, factIds: [fact-mentoring] }
+baseline:
+  canonical: "[{\"ats\":{\"aliases\":[],\"literals\":[{\"source\":{\"location\":\"What we are looking for, bullet 1\",\"quote\":\"language-model features\",\"span\":{\"end\":687,\"start\":664}},\"term\":\"language-model features\"},{\"source\":{\"location\":\"What we are looking for, bullet 1\",\"quote\":\"production\",\"span\":{\"end\":703,\"start\":693}},\"term\":\"production\"}]},\"classification\":{\"current\":\"hard\",\"frozen\":\"hard\"},\"eligibilityImpact\":\"none\",\"evidence\":{\"factIds\":[\"fact-production-llm\"],\"kind\":\"direct\"},\"id\":\"req-production-llm\",\"source\":{\"location\":\"What we are looking for, bullet 1\",\"quote\":\"Strong experience shipping language-model features into production.\",\"span\":{\"end\":704,\"start\":637}},\"weight\":3},{\"ats\":{\"aliases\":[],\"literals\":[{\"source\":{\"location\":\"What we are looking for, bullet 2\",\"quote\":\"evaluation\",\"span\":{\"end\":744,\"start\":734}},\"term\":\"evaluation\"},{\"source\":{\"location\":\"What we are looking for, bullet 2\",\"quote\":\"testing infrastructure\",\"span\":{\"end\":771,\"start\":749}},\"term\":\"testing infrastructure\"}]},\"classification\":{\"current\":\"hard\",\"frozen\":\"hard\"},\"eligibilityImpact\":\"none\",\"evidence\":{\"factIds\":[\"fact-evaluation-infrastructure\"],\"kind\":\"direct\"},\"id\":\"req-evaluation\",\"source\":{\"location\":\"What we are looking for, bullet 2\",\"quote\":\"A track record of building evaluation and testing infrastructure, not just using it.\",\"span\":{\"end\":791,\"start\":707}},\"weight\":3},{\"ats\":{\"aliases\":[],\"literals\":[{\"source\":{\"location\":\"What we are looking for, bullet 3\",\"quote\":\"TypeScript\",\"span\":{\"end\":815,\"start\":805}},\"term\":\"TypeScript\"},{\"source\":{\"location\":\"What we are looking for, bullet 3\",\"quote\":\"Python\",\"span\":{\"end\":825,\"start\":819}},\"term\":\"Python\"},{\"source\":{\"location\":\"What we are looking for, bullet 3\",\"quote\":\"backend services\",\"span\":{\"end\":861,\"start\":845}},\"term\":\"backend services\"}]},\"classification\":{\"current\":\"hard\",\"frozen\":\"hard\"},\"eligibilityImpact\":\"none\",\"evidence\":{\"factIds\":[\"fact-typescript-python\"],\"kind\":\"direct\"},\"id\":\"req-languages\",\"source\":{\"location\":\"What we are looking for, bullet 3\",\"quote\":\"Fluency in TypeScript or Python and comfort owning backend services.\",\"span\":{\"end\":862,\"start\":794}},\"weight\":3},{\"ats\":{\"aliases\":[],\"literals\":[{\"source\":{\"location\":\"What we are looking for, bullet 4\",\"quote\":\"deterministic\",\"span\":{\"end\":892,\"start\":879}},\"term\":\"deterministic\"},{\"source\":{\"location\":\"What we are looking for, bullet 4\",\"quote\":\"testable design\",\"span\":{\"end\":909,\"start\":894}},\"term\":\"testable design\"}]},\"classification\":{\"current\":\"hard\",\"frozen\":\"hard\"},\"eligibilityImpact\":\"none\",\"evidence\":{\"factIds\":[\"fact-deterministic-design\"],\"kind\":\"direct\"},\"id\":\"req-deterministic\",\"source\":{\"location\":\"What we are looking for, bullet 4\",\"quote\":\"A bias toward deterministic, testable design around stochastic components.\",\"span\":{\"end\":939,\"start\":865}},\"weight\":3},{\"ats\":{\"aliases\":[],\"literals\":[{\"source\":{\"location\":\"What we are looking for, bullet 5\",\"quote\":\"privacy\",\"span\":{\"end\":958,\"start\":951}},\"term\":\"privacy\"},{\"source\":{\"location\":\"What we are looking for, bullet 5\",\"quote\":\"data handling\",\"span\":{\"end\":976,\"start\":963}},\"term\":\"data handling\"}]},\"classification\":{\"current\":\"hard\",\"frozen\":\"hard\"},\"eligibilityImpact\":\"none\",\"evidence\":{\"factIds\":[\"fact-privacy\"],\"kind\":\"direct\"},\"id\":\"req-privacy\",\"source\":{\"location\":\"What we are looking for, bullet 5\",\"quote\":\"Care for privacy and data handling.\",\"span\":{\"end\":977,\"start\":942}},\"weight\":2},{\"ats\":{\"aliases\":[{\"forLiteral\":\"Retrieval-augmented generation\",\"reason\":\"Common industry abbreviation\",\"term\":\"RAG\"}],\"literals\":[{\"source\":{\"location\":\"Nice to have, bullet 1\",\"quote\":\"Retrieval-augmented generation\",\"span\":{\"end\":1028,\"start\":998}},\"term\":\"Retrieval-augmented generation\"}]},\"classification\":{\"current\":\"preferred\",\"frozen\":\"preferred\"},\"eligibilityImpact\":\"none\",\"evidence\":{\"factIds\":[\"fact-rag\"],\"kind\":\"direct\"},\"id\":\"req-rag\",\"source\":{\"location\":\"Nice to have, bullet 1\",\"quote\":\"Retrieval-augmented generation experience.\",\"span\":{\"end\":1040,\"start\":998}},\"weight\":1},{\"ats\":{\"aliases\":[],\"literals\":[{\"source\":{\"location\":\"Nice to have, bullet 2\",\"quote\":\"Open-source\",\"span\":{\"end\":1054,\"start\":1043}},\"term\":\"Open-source\"}]},\"classification\":{\"current\":\"preferred\",\"frozen\":\"preferred\"},\"eligibilityImpact\":\"none\",\"evidence\":{\"factIds\":[\"fact-open-source\"],\"kind\":\"direct\"},\"id\":\"req-open-source\",\"source\":{\"location\":\"Nice to have, bullet 2\",\"quote\":\"Open-source work we can read.\",\"span\":{\"end\":1072,\"start\":1043}},\"weight\":1},{\"ats\":{\"aliases\":[],\"literals\":[{\"source\":{\"location\":\"Nice to have, bullet 3\",\"quote\":\"mentoring\",\"span\":{\"end\":1095,\"start\":1086}},\"term\":\"mentoring\"}]},\"classification\":{\"current\":\"preferred\",\"frozen\":\"preferred\"},\"eligibilityImpact\":\"none\",\"evidence\":{\"factIds\":[\"fact-mentoring\"],\"kind\":\"direct\"},\"id\":\"req-mentoring\",\"source\":{\"location\":\"Nice to have, bullet 3\",\"quote\":\"Experience mentoring other engineers.\",\"span\":{\"end\":1112,\"start\":1075}},\"weight\":1}]"
+  sha256: 22721ad9b16f093df8e4cf510ee52fcdd02c08ccb70a0f2bf295a8f7e10474cb
+  receiptSha256: fafeea726779b5b7ea6af552ed6411872057f46d861fc5601851ebe78cf313a1
+changes: []

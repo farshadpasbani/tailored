@@ -82,23 +82,32 @@
 
   <section>
     <h2>Selected Projects</h2>
-    <div class="entry">
-      <div class="title">Gatehouse: a deterministic policy layer that wraps a stochastic model in testable gates</div>
+    <div class="entry" data-canon-entry="projects[0]">
+      <div class="eh">
+        <div class="title"><span class="project-name" data-canon-owner="projects[0].name">Gatehouse</span>: a deterministic policy layer that wraps a stochastic model in testable gates</div>
+        <div class="meta" data-canon-source="projects[0].year">2024</div>
+      </div>
       <ul>
         <li>Designed a gate pipeline so model output is checked against schema, style, and safety rules before it ever reaches a user, turning flaky behaviour into a build-time failure.</li>
         <li>Cut review time for generated documents by roughly two thirds by making the unhappy paths fail loudly in continuous integration rather than silently in production.</li>
       </ul>
       <div class="links"><a href="https://github.com/alexrivers/gatehouse">github.com/alexrivers/gatehouse</a></div>
     </div>
-    <div class="entry">
-      <div class="title">Lighthouse: an evaluation harness that scores model changes against a frozen rubric</div>
+    <div class="entry" data-canon-entry="projects[1]">
+      <div class="eh">
+        <div class="title"><span class="project-name" data-canon-owner="projects[1].name">Lighthouse</span>: an evaluation harness that scores model changes against a frozen rubric</div>
+        <div class="meta" data-canon-source="projects[1].year">2023</div>
+      </div>
       <ul>
         <li>Built a reproducible scoring loop so any prompt or model swap is measured against the same fixtures, giving the team a number to argue about instead of a vibe.</li>
         <li>Wired the harness into the release gate so a regression in answer quality blocks the merge automatically.</li>
       </ul>
     </div>
-    <div class="entry">
-      <div class="title">Ferry: a low-latency retrieval service for grounding answers in private documents</div>
+    <div class="entry" data-canon-entry="projects[2]">
+      <div class="eh">
+        <div class="title"><span class="project-name" data-canon-owner="projects[2].name">Ferry</span>: a low-latency retrieval service for grounding answers in private documents</div>
+        <div class="meta" data-canon-source="projects[2].year">2022</div>
+      </div>
       <ul>
         <li>Implemented a hybrid retrieval path combining keyword and vector search, tuned so the median grounded answer returns in well under a second.</li>
         <li>Added per-tenant isolation so one customer's documents can never surface in another customer's results.</li>
@@ -108,10 +117,10 @@
 
   <section>
     <h2>Experience</h2>
-    <div class="entry">
+    <div class="entry" data-canon-entry="experience[0]">
       <div class="eh">
-        <div><span class="title">Senior AI Engineer</span>, Meridian Labs</div>
-        <div class="meta">Manchester, UK · 2022–Present</div>
+        <div><span class="title" data-canon-owner="experience[0].title">Senior AI Engineer</span>, <span class="org" data-canon-owner="experience[0].org">Meridian Labs</span></div>
+        <div class="meta">Manchester, UK · <span data-canon-source="experience[0].start">2022</span>–<span data-canon-source="experience[0].end">Present</span></div>
       </div>
       <ul>
         <li>Lead the language-model platform team, owning the guardrail layer that every customer-facing feature ships behind.</li>
@@ -119,10 +128,10 @@
         <li>Mentor three engineers and run the weekly design review, raising the bar on testing and observability across the group.</li>
       </ul>
     </div>
-    <div class="entry">
+    <div class="entry" data-canon-entry="experience[1]">
       <div class="eh">
-        <div><span class="title">Software Engineer</span>, Northbridge Analytics</div>
-        <div class="meta">Leeds, UK · 2017–2022</div>
+        <div><span class="title" data-canon-owner="experience[1].title">Software Engineer</span>, <span class="org" data-canon-owner="experience[1].org">Northbridge Analytics</span></div>
+        <div class="meta">Leeds, UK · <span data-canon-source="experience[1].start">2017</span>–<span data-canon-source="experience[1].end">2022</span></div>
       </div>
       <ul>
         <li>Built and operated event-driven data services handling millions of records a day, with a strong focus on correctness and recovery.</li>
@@ -133,17 +142,17 @@
 
   <section>
     <h2>Education</h2>
-    <div class="edu">
+    <div class="edu" data-canon-entry="education[0]">
       <div class="two">
-        <div><span class="title">BSc Computer Science</span>, University of Manchester</div>
-        <div class="meta">2017</div>
+        <div><span class="title" data-canon-owner="education[0].qualification">BSc Computer Science</span>, <span class="institution" data-canon-owner="education[0].institution">University of Manchester</span></div>
+        <div class="meta" data-canon-source="education[0].year">2017</div>
       </div>
       <div class="tag">First-class honours</div>
     </div>
-    <div class="edu">
+    <div class="edu" data-canon-entry="education[1]">
       <div class="two">
-        <div><span class="title">Foundation Certificate in Mathematics</span>, Manchester College</div>
-        <div class="meta">2013</div>
+        <div><span class="title" data-canon-owner="education[1].qualification">Foundation Certificate in Mathematics</span>, <span class="institution" data-canon-owner="education[1].institution">Manchester College</span></div>
+        <div class="meta" data-canon-source="education[1].year">2013</div>
       </div>
     </div>
   </section>
@@ -151,7 +160,7 @@
   <section>
     <h2>Publications &amp; Certifications</h2>
     <ul class="list-plain">
-      <li>Rivers, A. (2024). Deterministic gates around stochastic models. Internal engineering journal.</li>
+      <li data-canon-source="publications[0]">Rivers, A. (2024). Deterministic gates around stochastic models. Internal engineering journal.</li>
       <li>AWS Certified Solutions Architect, Associate</li>
       <li>Certified Kubernetes Application Developer</li>
     </ul>

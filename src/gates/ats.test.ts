@@ -38,6 +38,14 @@ describe("keywordCoverage", () => {
     const r = keywordCoverage("strong ML background", ["machine learning"], { "machine learning": ["ML"] });
     expect(r.covered).toEqual(["machine learning"]); expect(r.missing).toEqual([]);
   });
+  it("reports a term covered ONLY via synonym, so a human can waive what the JD names literally", () => {
+    const r = keywordCoverage("strong ML background", ["machine learning"], { "machine learning": ["ML"] });
+    expect(r.synonymOnly).toEqual(["machine learning"]);
+  });
+  it("does not report synonym-only when the literal term is present too", () => {
+    const r = keywordCoverage("machine learning and ML", ["machine learning"], { "machine learning": ["ML"] });
+    expect(r.synonymOnly).toEqual([]);
+  });
   it("matches a synonym when the map key case differs from the term", () => {
     const r = keywordCoverage("strong ML background", ["Machine Learning"], { "machine learning": ["ML"] });
     expect(r.covered).toEqual(["Machine Learning"]); expect(r.missing).toEqual([]);

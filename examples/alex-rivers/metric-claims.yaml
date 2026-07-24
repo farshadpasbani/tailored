@@ -1,0 +1,35 @@
+schemaVersion: 1
+claims: []
+exemptions:
+  - id: gatehouse-year
+    text: "Gatehouse: a deterministic policy layer that wraps a stochastic model in testable gates 2024"
+    classification: date
+    sourcePaths: ["projects[0].year"]
+  - id: lighthouse-year
+    text: "Lighthouse: an evaluation harness that scores model changes against a frozen rubric 2023"
+    classification: date
+    sourcePaths: ["projects[1].year"]
+  - id: ferry-year
+    text: "Ferry: a low-latency retrieval service for grounding answers in private documents 2022"
+    classification: date
+    sourcePaths: ["projects[2].year"]
+  - id: meridian-range
+    text: "2022–Present"
+    classification: date
+    sourcePaths: ["experience[0].start", "experience[0].end"]
+  - id: northbridge-range
+    text: "2017–2022"
+    classification: date
+    sourcePaths: ["experience[1].start", "experience[1].end"]
+  - id: degree-year
+    text: "BSc Computer Science, University of Manchester 2017"
+    classification: date
+    sourcePaths: ["education[0].year"]
+  - id: foundation-year
+    text: "Foundation Certificate in Mathematics, Manchester College 2013"
+    classification: date
+    sourcePaths: ["education[1].year"]
+  - id: publication-year
+    text: "Rivers, A. (2024). Deterministic gates around stochastic models. Internal engineering journal."
+    classification: date
+    sourcePaths: ["publications[0]"]

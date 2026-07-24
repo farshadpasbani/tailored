@@ -11,4 +11,7 @@ describe("lintAiTells", () => {
   });
   it("does NOT flag en dash ranges or compound hyphens", () => { expect(lintAiTells("2022–Present, low-carbon")).toEqual([]); });
   it("reports a 1-based line number", () => { expect(lintAiTells("ok\nbad — here")[0].line).toBe(2); });
+  it("does not rewrite prescribed commands inside Markdown code", () => {
+    expect(lintAiTells("Run `npm run replay:private -- /vault`.\n```sh\ncommand -- flag\n```")).toEqual([]);
+  });
 });
