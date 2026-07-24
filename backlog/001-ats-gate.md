@@ -1,7 +1,7 @@
 ---
 id: "001"
 title: Add the ATS gate (tailored ats)
-status: in-review
+status: done
 depends_on: []
 acceptance:
   - "`tailored ats <pdf> --jd <jd.yaml>` exists, validates the jd, exits 0/1"
