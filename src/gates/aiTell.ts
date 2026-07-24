@@ -7,9 +7,12 @@ const RULES: { rule: string; re: RegExp }[] = [
 ];
 export function lintAiTells(text: string): AiTellIssue[] {
   const issues: AiTellIssue[] = [];
+  // Commands and identifiers are prescribed syntax, not prose style. Mask
+  // Markdown code while preserving every index and newline for diagnostics.
+  const scanned = text.replace(/```[\s\S]*?```|`[^`\n]*`/g, code => code.replace(/[^\n]/g, " "));
   for (const { rule, re } of RULES) {
     re.lastIndex = 0;
-    for (let m = re.exec(text); m; m = re.exec(text)) {
+    for (let m = re.exec(scanned); m; m = re.exec(scanned)) {
       issues.push({ rule, line: lineAt(text, m.index), index: m.index, match: m[0] });
     }
   }
