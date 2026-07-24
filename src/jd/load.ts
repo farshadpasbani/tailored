@@ -13,3 +13,7 @@ export function loadJd(path: string): ParseResult {
   catch (e) { return { ok: false, errors: [`could not read/parse YAML at ${path}: ${(e as Error).message}`] }; }
   return parseJd(raw);
 }
+
+/** Explicit compatibility aliases: legacy keyword JDs are ATS inputs, not verified fit records. */
+export const parseLegacyJd = parseJd;
+export const loadLegacyJd = loadJd;
