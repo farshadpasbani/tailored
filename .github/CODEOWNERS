@@ -1,0 +1,26 @@
+# Code owners for tailored.
+#
+# These paths decide what the tool is allowed to assert about a person.
+# A gate that gets looser looks identical to a gate that got fixed, unless a
+# human reads the diff. That is why they are pinned here.
+
+# Default owner for everything not matched below.
+*                   @farshadpasbani
+
+# Gate logic: the deterministic checks that pass or fail a pack.
+/src/gates/         @farshadpasbani
+
+# Verification, receipts and hashing: the trust chain.
+/src/verify/        @farshadpasbani
+
+# Policy evaluation.
+/src/policy/        @farshadpasbani
+
+# Requirement schema, freezing and migration.
+/src/requirements/  @farshadpasbani
+
+# Evidence binding and claim authority.
+/src/evidence/      @farshadpasbani
+
+# CI, workflows and repository automation.
+/.github/           @farshadpasbani
