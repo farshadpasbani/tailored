@@ -1,0 +1,5 @@
+schemaVersion: 1
+sources:
+  - id: jd
+    url: https://example.com/halyard-ai-engineer
+    sha256: 9c93a170a2a18a4d7955914bc282d67d87f4407164b5116461fc81ee07bb2dc9

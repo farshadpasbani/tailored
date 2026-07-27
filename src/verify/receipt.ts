@@ -19,6 +19,8 @@ export const FindingSchema = z.object({
 
 export const VerifyReceiptSchema = z.object({
   schemaVersion: z.literal(1), kind: z.literal("tailored.verify-pack"), state: z.literal("ready-for-human"),
+  /** Adapter provenance. Absent in receipts written before provenance was recorded; those are production. */
+  dependencies: z.enum(["production", "injected"]).optional(),
   engine: z.object({ version: z.string().min(1), revision: z.string().min(1), revisionSha256: Digest }).strict(),
   bindings: z.object({
     descriptor: Binding,

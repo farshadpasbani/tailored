@@ -1,0 +1,47 @@
+schemaVersion: 1
+gates:
+  - id: canon-schema
+    severity: blocking
+  - id: evidence-schema
+    severity: blocking
+  - id: requirements-trust
+    severity: blocking
+  - id: fit-blockers
+    severity: blocking
+  - id: protected-topics
+    severity: blocking
+  - id: prohibited-claims
+    severity: blocking
+  - id: claim-integrity
+    severity: blocking
+  - id: pdf-text-layer
+    severity: blocking
+  - id: page-integrity
+    severity: blocking
+  - id: corpus-eligibility
+    severity: blocking
+  - id: ats
+    severity: advisory
+  - id: ai-tell
+    severity: advisory
+  - id: impact
+    severity: advisory
+  - id: distinctness
+    severity: advisory
+  - id: strategy-selection
+    severity: advisory
+  - id: evidence-altitude
+    severity: advisory
+  - id: editorial
+    severity: advisory
+  - id: accessibility
+    severity: advisory
+thresholds:
+  atsMinimum: 0.8
+  fitMinimumConfidence: 0.5
+  fitMinimumScore: 0.8
+  minimumFontPt: 9
+  minimumMarginMm: 8
+  minimumLineHeight: 1.28
+  maximumSharedRuns: 0
+  maximumSignaturePhrases: 0

@@ -51,9 +51,15 @@ export const PackDescriptorSchema = z.object({
 });
 export type PackDescriptor = z.infer<typeof PackDescriptorSchema>;
 
-interface CheckContext { artifact: PackDescriptor["artifacts"][number]; descriptor: PackDescriptor; descriptorDirectory: string; stagedHtml: string; stagedPdf: string; pdfText: string; }
-interface VerifyRenderContext extends Omit<CheckContext, "pdfText"> { sourceHtml: string; declaredArtifactPath: string; }
-interface ProductionDependencies {
+export interface CheckContext { artifact: PackDescriptor["artifacts"][number]; descriptor: PackDescriptor; descriptorDirectory: string; stagedHtml: string; stagedPdf: string; pdfText: string; }
+export interface VerifyRenderContext extends Omit<CheckContext, "pdfText"> { sourceHtml: string; declaredArtifactPath: string; }
+/**
+ * The only replaceable surface of the transaction: render/inspect, PDF text, and page
+ * count. Filesystem, hashing, snapshot capture, the gate registry, and the staging
+ * transaction always run for real, so a receipt from an override still proves everything
+ * except the three adapters, and says so through `dependencies: "injected"`.
+ */
+export interface PackDependencies {
   verifyAndRender: (context: VerifyRenderContext) => Promise<PackFinding[]>;
   extractText: (pdf: string) => Promise<string>;
   pageCount: (pdf: string) => Promise<number>;
@@ -159,7 +165,7 @@ function prepareProductionTrust(descriptor: PackDescriptor, snapshot: SourceSnap
   return { canon: canon.data, evidence: evidence.data, requirements: requirements.data, policy: policy.data, corpus: snapshot.corpus, corpusDocs, waivers, attestations, strategy, packSha256: snapshot.bindings.packSha256, policySha256: snapshot.bindings.inputs.policy.sha256 };
 }
 
-function createProductionDependencies(trust: ProductionTrust): ProductionDependencies {
+function createProductionDependencies(trust: ProductionTrust): PackDependencies {
   return {
     verifyAndRender: async context => {
       const claims = await verifyClaimIntegrity({ htmlPath: context.sourceHtml, declaredArtifactPath: context.declaredArtifactPath, artifact: context.artifact.id, evidence: trust.evidence, canon: trust.canon, evidencePath: context.descriptor.inputs.evidence, outputPdfPath: context.stagedPdf });
@@ -236,7 +242,7 @@ function authoritativeFindings(contexts: CheckContext[], raw: PackFinding[], des
   return findings;
 }
 
-export async function verifyPack(descriptorPath: string, outputDirectory: string): Promise<IssuedVerifyReceipt> {
+export async function verifyPack(descriptorPath: string, outputDirectory: string, dependencies?: Partial<PackDependencies>): Promise<IssuedVerifyReceipt> {
   const output = resolve(outputDirectory);
   if (existsSync(output)) throw new Error(`candidate output already exists: ${outputDirectory}`);
   const base = dirname(resolve(descriptorPath));
@@ -244,7 +250,8 @@ export async function verifyPack(descriptorPath: string, outputDirectory: string
   const descriptor = resolved(loadedDescriptor.descriptor, base);
   const initialSnapshot = captureSourceSnapshot(descriptor, loadedDescriptor.sha256, base);
   const trust = prepareProductionTrust(descriptor, initialSnapshot);
-  const deps = createProductionDependencies(trust);
+  const deps = { ...createProductionDependencies(trust), ...dependencies };
+  const provenance = dependencies === undefined ? "production" as const : "injected" as const;
   const engine = deriveEngineIdentity();
   const parent = dirname(output);
   const temporary = mkdtempSync(join(parent, ".tailored-verify-"));
@@ -278,6 +285,7 @@ export async function verifyPack(descriptorPath: string, outputDirectory: string
     const payload = {
       schemaVersion: 1 as const,
       kind: "tailored.verify-pack" as const, state: "ready-for-human" as const,
+      dependencies: provenance,
       engine, bindings, findings,
     };
     const receipt = VerifyReceiptSchema.parse({ ...payload, receiptSha256: sha256Bytes(canonicalJson(payload)) });
@@ -302,6 +310,8 @@ export function verifyReceiptFreshness(receipt: VerifyReceipt, descriptorPath: s
   const stale: string[] = [];
   const { receiptSha256, ...payload } = receipt;
   if (sha256Bytes(canonicalJson(payload)) !== receiptSha256) stale.push("receipt:integrity");
+  // Receipts written before provenance was recorded carry no field and are production.
+  if ((receipt.dependencies ?? "production") !== "production") stale.push("receipt:provenance");
   if (receipt.engine.revisionSha256 !== sha256Bytes(receipt.engine.revision)) stale.push("engine:integrity");
   const currentEngine = deriveEngineIdentity();
   if (receipt.engine.version !== currentEngine.version || receipt.engine.revision !== currentEngine.revision || receipt.engine.revisionSha256 !== currentEngine.revisionSha256) stale.push("engine:identity");

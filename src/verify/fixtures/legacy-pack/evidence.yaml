@@ -1,0 +1,90 @@
+schemaVersion: 2
+artifacts:
+  - id: cv
+    path: cv.html
+    sha256: 6999aa62ff397e856f1fe358b63140149809a4c56c5fc67479b1df7cb8186ede
+    resourceRoot: .
+    resources: []
+    resourceManifestSha256: 4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+  - id: cover
+    path: cover.html
+    sha256: 1b472bb2a3436cfd35603bdd8c0312d7b9b7e165a02716297d2266f827fc0a1e
+    resourceRoot: .
+    resources: []
+    resourceManifestSha256: 4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+employerSources: []
+claims:
+  - id: cv.production-llm
+    artifact: cv
+    text: Alex has shipped language-model features into production at Meridian Labs.
+    subject: candidate
+    namespace: candidate
+    evidenceIds:
+      - fact-production-llm
+    artifactSha256: 6999aa62ff397e856f1fe358b63140149809a4c56c5fc67479b1df7cb8186ede
+    textSha256: 5b93d77f0eb16b0efbf73768fdd2f60355d94936315b3106e597e97393973f33
+    bindingSha256: 61e3cbf4e707b6569c2f89acee0b12bab1fae05de3c53debc8d5294c2927dfc0
+  - id: cv.evaluation
+    artifact: cv
+    text: Alex built Lighthouse, an evaluation harness wired into a release gate.
+    subject: candidate
+    namespace: candidate
+    evidenceIds:
+      - fact-evaluation-infrastructure
+    artifactSha256: 6999aa62ff397e856f1fe358b63140149809a4c56c5fc67479b1df7cb8186ede
+    textSha256: 24642cb1b92d1fbc11d4aea0d4f43c98d2fa7f819b171f3cdbebddaeff65fdc6
+    bindingSha256: 73e898ebf4234e67771408e5d422bc948b4f94d52d04ef073eee54d7fcc16e4a
+  - id: cv.languages
+    artifact: cv
+    text: Alex uses TypeScript and Python and has owned backend services.
+    subject: candidate
+    namespace: candidate
+    evidenceIds:
+      - fact-typescript-python
+    artifactSha256: 6999aa62ff397e856f1fe358b63140149809a4c56c5fc67479b1df7cb8186ede
+    textSha256: a38a08c5c889af6323f8eb7be5c5f0b8df015993f72758bca6ebad46163f62d0
+    bindingSha256: e5d42fa2d2f5c59d5b9d914758167611bc9be9770733053e9fe1fbbbea5f2754
+  - id: cv.deterministic
+    artifact: cv
+    text: >-
+      Alex designed deterministic, testable gates around stochastic model output
+      in Gatehouse.
+    subject: candidate
+    namespace: candidate
+    evidenceIds:
+      - fact-deterministic-design
+    artifactSha256: 6999aa62ff397e856f1fe358b63140149809a4c56c5fc67479b1df7cb8186ede
+    textSha256: 6bf22a73d08e37e752a78b1f202296c4dd3944214e8934b31114289ef312bc82
+    bindingSha256: ea9bef7d2f41fb6f9f14326b3be394ef9f9957fcc5ec2e356882ac55804b7049
+  - id: cover.production-llm
+    artifact: cover
+    text: Alex has shipped language-model features into production at Meridian Labs.
+    subject: candidate
+    namespace: candidate
+    evidenceIds:
+      - fact-production-llm
+    artifactSha256: 1b472bb2a3436cfd35603bdd8c0312d7b9b7e165a02716297d2266f827fc0a1e
+    textSha256: 5b93d77f0eb16b0efbf73768fdd2f60355d94936315b3106e597e97393973f33
+    bindingSha256: 3f9e3728b112dd89f812b5aa6865714331180ff997fcb090425b341c0e75f1af
+  - id: cover.privacy
+    artifact: cover
+    text: Alex shipped per-tenant isolation and local-only source-data handling.
+    subject: candidate
+    namespace: candidate
+    evidenceIds:
+      - fact-privacy
+    artifactSha256: 1b472bb2a3436cfd35603bdd8c0312d7b9b7e165a02716297d2266f827fc0a1e
+    textSha256: 29e2742604a6828ca8bc06ec387f3c3a139423e1c0275c8261873190193a1d73
+    bindingSha256: 767c5c6aba87a3a7e1deefb39c6bfb5c236135ebdaa8007d21518abfeec0cc07
+  - id: cover.rag
+    artifact: cover
+    text: >-
+      Alex implemented hybrid retrieval for grounding answers in private
+      documents.
+    subject: candidate
+    namespace: candidate
+    evidenceIds:
+      - fact-rag
+    artifactSha256: 1b472bb2a3436cfd35603bdd8c0312d7b9b7e165a02716297d2266f827fc0a1e
+    textSha256: 1444c46e9bf41a41bea0c4d2f443a4d949122d6db61cee89e28e211f2fcf9be5
+    bindingSha256: ebd86fb8707bfbdc0b70206e0d3e38245e2bfdc040821d9bbcedb41df1def12d

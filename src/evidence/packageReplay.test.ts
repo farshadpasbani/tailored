@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -16,7 +16,9 @@ describe("published private replay", () => {
     expect(installed.status, installed.stderr).toBe(0);
     const script = join(consumer, "node_modules", "tailored", "scripts", "replay-claim-integrity.mjs");
     expect(existsSync(script)).toBe(true);
-    expect(existsSync(join(consumer, "node_modules", "tailored", "dist", "verify", "pack.testing.js"))).toBe(false);
+    // No test-only verify module ships, under any name. The verifier is testable through
+    // its dependency seam instead, and every such receipt says so in `dependencies`.
+    expect(readdirSync(join(consumer, "node_modules", "tailored", "dist", "verify")).filter(name => /\.(test|testing)\./.test(name))).toEqual([]);
     const deepImport = spawnSync(process.execPath, ["--input-type=module", "-e", "await import('tailored/verify/pack.js')"], { cwd: consumer, encoding: "utf8" });
     expect(deepImport.status).not.toBe(0);
     expect(`${deepImport.stdout}${deepImport.stderr}`).toMatch(/ERR_PACKAGE_PATH_NOT_EXPORTED/);

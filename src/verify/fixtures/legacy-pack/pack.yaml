@@ -1,0 +1,24 @@
+schemaVersion: 1
+inputs:
+  canon: ../../../../examples/alex-rivers/canon.yaml
+  jd: ../../../../examples/alex-rivers/job-description.md
+  requirements: ../../../../examples/alex-rivers/requirements.yaml
+  baselineReceipt: ../../../../examples/alex-rivers/baseline-receipt.yaml
+  evidence: evidence.yaml
+  strategy: strategy.yaml
+  research: research.yaml
+  preferences: preferences.yaml
+  policy: policy.yaml
+artifacts:
+  - id: cv
+    html: cv.html
+    pdf: cv.pdf
+    maxPages: 1
+  - id: cover
+    html: cover.html
+    pdf: cover.pdf
+    maxPages: 1
+corpus:
+  descriptor: corpus.yaml
+waivers: []
+attestations: []
