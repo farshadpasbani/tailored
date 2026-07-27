@@ -1,0 +1,238 @@
+{
+  "schemaVersion": 1,
+  "kind": "tailored.verify-pack",
+  "state": "ready-for-human",
+  "engine": {
+    "version": "0.1.0",
+    "revision": "905422262ee04674544bcac27647384c715c067d",
+    "revisionSha256": "c1e746f21c0af71b37068f73bffad0bd4681f7e2fcc6aee463edd3a51e7f2d30"
+  },
+  "bindings": {
+    "descriptor": {
+      "id": "pack-descriptor",
+      "sha256": "cce91aab77d113ba8a5f2052c7968217ed678615f35ab79ea0d4c7ca1f32501c"
+    },
+    "packSha256": "39fdcbb7919def8e34305e7c0a4b9c1c5c1621629b091d2178d7c362796aa835",
+    "inputs": {
+      "canon": {
+        "id": "canon",
+        "sha256": "81566db2e371876a64d6e872538d424698f24f6ca8642545e163a1a3a04126d1"
+      },
+      "jd": {
+        "id": "jd",
+        "sha256": "9c93a170a2a18a4d7955914bc282d67d87f4407164b5116461fc81ee07bb2dc9"
+      },
+      "requirements": {
+        "id": "requirements",
+        "sha256": "f1d890d257ce3dd3a220419f110a34b2d367747a700e0defdc334e9f739f548b"
+      },
+      "baselineReceipt": {
+        "id": "baselineReceipt",
+        "sha256": "c78da8f81d7a4497a5029f4fe47078c1c1c3956655c979c85b539ab8b16c8b3f"
+      },
+      "evidence": {
+        "id": "evidence",
+        "sha256": "d8c302c691ce05777f5e5924f3868c6ff42eebd6e96a4a1c3de4f9e02e19e6e6"
+      },
+      "strategy": {
+        "id": "strategy",
+        "sha256": "3bc13a94ce1a058327a4561eabf646964ce9c0f3b059b8c3fbfb249039a2e40c"
+      },
+      "research": {
+        "id": "research",
+        "sha256": "a4c3260509567f50a6005f2a42d35c09385965c73afb74ab4921655fa344291a"
+      },
+      "preferences": {
+        "id": "preferences",
+        "sha256": "f38da6ef9557d269776a4bcb38d240057c58d488671588f62a3bf6ff4d53780d"
+      },
+      "policy": {
+        "id": "policy",
+        "sha256": "1570b1a2697aeb31ad1f86e0a6cafd219c3a8d172a45c2d0aed6faedf27a3009"
+      }
+    },
+    "artifacts": [
+      {
+        "id": "cv",
+        "sha256": "6999aa62ff397e856f1fe358b63140149809a4c56c5fc67479b1df7cb8186ede"
+      },
+      {
+        "id": "cover",
+        "sha256": "1b472bb2a3436cfd35603bdd8c0312d7b9b7e165a02716297d2266f827fc0a1e"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "cv-html",
+        "sha256": "6999aa62ff397e856f1fe358b63140149809a4c56c5fc67479b1df7cb8186ede",
+        "file": "cv.html"
+      },
+      {
+        "id": "cv-pdf",
+        "sha256": "b792e4b16c3e1187c93dfe2204ac4d367a4c7eb341d42cb55941eebdf5074583",
+        "file": "cv.pdf"
+      },
+      {
+        "id": "cover-html",
+        "sha256": "1b472bb2a3436cfd35603bdd8c0312d7b9b7e165a02716297d2266f827fc0a1e",
+        "file": "cover.html"
+      },
+      {
+        "id": "cover-pdf",
+        "sha256": "a7586829f3fff0f196b60d2d240674f3edf410b8ce4141db70c2860cd17f5a81",
+        "file": "cover.pdf"
+      }
+    ],
+    "corpusDescriptor": {
+      "id": "corpus-descriptor",
+      "sha256": "4df0ea45b7630b3c0cd161dec458b16da8d9e9aa7d0692c686722bbc0e23444b"
+    },
+    "corpusMembers": [
+      {
+        "id": "prior",
+        "sha256": "4d5b088a037fab4444aab90af1b66e0034d6ece3dfa61078403b07028b191d35"
+      }
+    ],
+    "waivers": [],
+    "attestations": []
+  },
+  "findings": [
+    {
+      "id": "canon-schema",
+      "severity": "blocking",
+      "ok": true,
+      "messages": []
+    },
+    {
+      "id": "evidence-schema",
+      "severity": "blocking",
+      "ok": true,
+      "messages": []
+    },
+    {
+      "id": "requirements-trust",
+      "severity": "blocking",
+      "ok": true,
+      "messages": []
+    },
+    {
+      "id": "fit-blockers",
+      "severity": "blocking",
+      "ok": true,
+      "messages": []
+    },
+    {
+      "id": "protected-topics",
+      "severity": "blocking",
+      "ok": true,
+      "messages": []
+    },
+    {
+      "id": "prohibited-claims",
+      "severity": "blocking",
+      "ok": true,
+      "messages": []
+    },
+    {
+      "id": "claim-integrity",
+      "severity": "blocking",
+      "ok": true,
+      "messages": []
+    },
+    {
+      "id": "pdf-text-layer",
+      "severity": "blocking",
+      "ok": true,
+      "messages": []
+    },
+    {
+      "id": "page-integrity",
+      "severity": "blocking",
+      "ok": true,
+      "messages": []
+    },
+    {
+      "id": "corpus-eligibility",
+      "severity": "blocking",
+      "ok": true,
+      "messages": []
+    },
+    {
+      "id": "ats",
+      "severity": "advisory",
+      "ok": false,
+      "messages": [
+        "missing literal: Open-source",
+        "missing literal: Open-source",
+        "missing literal: Python",
+        "missing literal: Retrieval-augmented generation",
+        "missing literal: Retrieval-augmented generation",
+        "missing literal: TypeScript",
+        "missing literal: backend services",
+        "missing literal: data handling",
+        "missing literal: deterministic",
+        "missing literal: evaluation",
+        "missing literal: mentoring",
+        "missing literal: mentoring",
+        "missing literal: privacy",
+        "missing literal: privacy",
+        "missing literal: testable design",
+        "missing literal: testable design",
+        "missing literal: testing infrastructure",
+        "missing literal: testing infrastructure"
+      ],
+      "disposition": "review-required"
+    },
+    {
+      "id": "ai-tell",
+      "severity": "advisory",
+      "ok": true,
+      "messages": []
+    },
+    {
+      "id": "impact",
+      "severity": "advisory",
+      "ok": true,
+      "messages": []
+    },
+    {
+      "id": "distinctness",
+      "severity": "advisory",
+      "ok": true,
+      "messages": []
+    },
+    {
+      "id": "strategy-selection",
+      "severity": "advisory",
+      "ok": true,
+      "messages": []
+    },
+    {
+      "id": "evidence-altitude",
+      "severity": "advisory",
+      "ok": false,
+      "messages": [
+        "missing strategy anchorFactIds",
+        "semantic evidence altitude requires human review under strategy schema v1"
+      ],
+      "disposition": "review-required"
+    },
+    {
+      "id": "editorial",
+      "severity": "advisory",
+      "ok": false,
+      "messages": [
+        "artifact cover: natural-language: human editorial review required",
+        "artifact cv: natural-language: human editorial review required"
+      ],
+      "disposition": "review-required"
+    },
+    {
+      "id": "accessibility",
+      "severity": "advisory",
+      "ok": true,
+      "messages": []
+    }
+  ],
+  "receiptSha256": "1b203d6829f90d979deebfb1cdf410dd0c816da0baac679a0b0b64fc1444ccfb"
+}

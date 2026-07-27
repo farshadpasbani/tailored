@@ -61,6 +61,9 @@ describe("public canon v2 API", () => {
     const api = await import("./index.js");
     expect(api).not.toHaveProperty("verifyPackForTest");
     expect(api).not.toHaveProperty("TestVerifyReceiptSchema");
+    // The retired test-only verifier is replaced by data, not by a second entry point:
+    // the public receipt declares which adapters produced it, and nothing else.
+    expect(VerifyReceiptSchema.shape.dependencies.unwrap().options).toEqual(["production", "injected"]);
   });
 });
 

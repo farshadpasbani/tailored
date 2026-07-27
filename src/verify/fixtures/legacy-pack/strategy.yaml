@@ -1,0 +1,7 @@
+schemaVersion: 1
+selectedProjectIds:
+  - Gatehouse
+  - Lighthouse
+rationale: The role asks for deterministic gating and evaluation infrastructure.
+openingMove: Lead with the release-gate evaluation harness.
+argument: Deterministic gates around a stochastic model are the transferable skill.

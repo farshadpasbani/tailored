@@ -510,3 +510,73 @@ private-byte deltas. Per-pack diagnostics and inventory remain external.
 - Final field authority uses literal terms only at 80%: private fixture A 72.1% and
   private fixture B 51.9%, both FAIL. Fixture A's reviewed-but-posting-absent `Python`
   entry is explicitly rejected instead of being attached to an unrelated source.
+
+## Backlog 014 — retire the verify-pack doppelganger
+
+### What replaced the wall
+
+- `src/verify/pack.testing.ts` was a hand-maintained second implementation of the
+  pack transaction. It is deleted. `verifyPack` now takes an optional third
+  argument that overrides only `verifyAndRender`, `extractText` and `pageCount`.
+  Filesystem access, hashing, snapshot capture, the gate registry and the
+  staging/atomic-rename transaction are not injectable and always run for real.
+- Three guard tests used to defend the duplication. They are replaced by data:
+  the receipt payload carries `dependencies: "production" | "injected"`, inside
+  the hashed payload, so `receiptSha256` binds it. Any third argument — even an
+  empty object — yields `"injected"`.
+- `verifyReceiptFreshness` pushes `receipt:provenance` for a receipt whose
+  provenance is not production, so the `verify-pack-fresh` CLI lane exits 1 on an
+  injected receipt even when that receipt is internally self-consistent.
+
+### Legacy receipts
+
+- The field is optional on parse and absent means production, so receipts written
+  before this change still parse and still verify. `canonicalJson` drops undefined
+  values, so an absent field leaves the pre-change digest untouched.
+- Stripping `dependencies` from an injected receipt does not launder it: the
+  remaining payload no longer hashes to the recorded `receiptSha256`, so freshness
+  reports `receipt:integrity`. Both directions are asserted in pack.test.ts.
+- `src/verify/fixtures/legacy-receipt.json` is a genuine pre-change artefact,
+  minted by the pre-change CLI with real Chrome and real Poppler over
+  `src/verify/fixtures/legacy-pack`. The fixture pack binds the published
+  `examples/alex-rivers` canon, job description, requirements and baseline
+  receipt in place; only the claim-annotated artefacts, evidence map, policy,
+  strategy, research, preferences and corpus are authored beside them.
+
+### Test port
+
+- All 13 scenarios from the old clone-driven pack.test.ts now drive the real
+  `verifyPack`; the gates run for real against a complete fixture pack. Two
+  scenarios could not be ported literally, because the behaviour they injected no
+  longer exists:
+  - The old suite injected a failing `blockingChecks` adapter. The seam no longer
+    offers one, so the blocking-failure case now comes from a `verifyAndRender`
+    adapter that returns a failing claim-integrity finding — the real registry
+    aggregates and blocks on it.
+  - The old suite injected an advisory finding with no disposition, and a
+    `writeReceipt` adapter that threw. Neither is reachable: the registry always
+    assigns a disposition, and the receipt write is not injectable. The
+    disposition invariant is now asserted on both ends (schema rejects an
+    undisposed advisory finding; every failing advisory finding in a real receipt
+    carries `review-required`), and the interrupted-write case squats the reserved
+    `receipt.json` name inside the staging directory so the real `wx` write fails.
+- Injected receipts are never fresh, so the ported staleness assertions filter the
+  always-present `receipt:provenance` key and assert on the remaining classes.
+
+### Verification
+
+- `npm test`: 485 passed, 1 skipped, 52 files (2 skipped: the env-gated private
+  field lane and the private replay lane).
+- Field test on this machine (real Chrome 141, Poppler 26.06):
+  `node dist/cli.js verify-pack src/verify/fixtures/legacy-pack/pack.yaml <out>`
+  passes with every blocking finding ok and `dependencies: "production"`;
+  `verify-pack-fresh` then exits 0. Re-signing that same receipt with
+  `dependencies: "injected"` makes the same command exit 1 with
+  `stale verify-pack receipt: receipt:provenance`.
+- The literal acceptance wording asked for the field run over
+  `examples/alex-rivers`. That directory is not a complete pack — it has no
+  evidence, policy, corpus, strategy, research or preferences file, and its CV and
+  cover carry no claim markers, which claim integrity requires. Annotating the
+  published example is a separate, larger change outside this unit's paths, so the
+  field pack binds the example's real trust inputs and supplies the missing files
+  beside them.
