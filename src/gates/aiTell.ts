@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { GateInputError, type Gate } from "./gate.js";
+import { GateInputError, type PackGate } from "./gate.js";
 import { lineAt } from "./text.js";
 export interface AiTellIssue { rule: string; line: number; index: number; match: string; }
 const RULES: { rule: string; re: RegExp }[] = [
@@ -21,7 +21,7 @@ export function lintAiTells(text: string): AiTellIssue[] {
   return issues.sort((a, b) => a.index - b.index);
 }
 
-export const aiTellGate: Gate = {
+export const aiTellGate: PackGate = {
   id: "ai-tell",
   severity: "advisory",
   run: async input => {

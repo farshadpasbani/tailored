@@ -1,16 +1,39 @@
 import { describe, it, expect } from "vitest";
 import { GATES, PACK_GATES, gateCommands, gate, SMOKE_SET } from "./registry.js";
-import type { Gate, GateInput } from "./gate.js";
+import type { Gate, GateInput, PackGate } from "./gate.js";
 import { verifyPolicySchemaFor, VerifyPolicySchema, REQUIRED_BLOCKING_GATES, REQUIRED_ADVISORY_GATES } from "../policy/verify.js";
 import { assembleFindings } from "../verify/pack.js";
-import { buildProgram } from "../cli.js";
+import { buildProgram, smokeCalls, COMMAND_ORDER, BUILTIN_COMMANDS } from "../cli.js";
+
+/**
+ * The receipt vocabulary, written out by hand. Every policy.yaml in existence and every
+ * receipt ever issued speaks these exact strings in this exact order, so this is a copy of
+ * that contract rather than a projection of the registry: a change on either side fails here.
+ */
+const RECEIPT_ORDER = [
+  "canon-schema", "evidence-schema", "requirements-trust", "fit-blockers", "protected-topics",
+  "prohibited-claims", "claim-integrity", "pdf-text-layer", "page-integrity", "corpus-eligibility",
+  "ats", "ai-tell", "impact", "distinctness", "strategy-selection", "evidence-altitude",
+  "editorial", "accessibility",
+];
+
+/** The severity each of those IDs carries, likewise written out rather than derived. */
+const RECEIPT_SEVERITY: Record<string, "blocking" | "advisory"> = {
+  "canon-schema": "blocking", "evidence-schema": "blocking", "requirements-trust": "blocking",
+  "fit-blockers": "blocking", "protected-topics": "blocking", "prohibited-claims": "blocking",
+  "claim-integrity": "blocking", "pdf-text-layer": "blocking", "page-integrity": "blocking",
+  "corpus-eligibility": "blocking",
+  ats: "advisory", "ai-tell": "advisory", impact: "advisory", distinctness: "advisory",
+  "strategy-selection": "advisory", "evidence-altitude": "advisory", editorial: "advisory",
+  accessibility: "advisory",
+};
 
 /**
  * The one-file-plus-one-registration proof. `synthetic-check` exists only here: it is
  * registered into a copy of the registry and must reach CLI dispatch, policy derivation,
  * and verify-pack assembly without any other module being edited.
  */
-const synthetic: Gate = {
+const synthetic: PackGate = {
   id: "synthetic-check",
   severity: "advisory",
   run: async (input: GateInput) => ({
@@ -27,7 +50,8 @@ const synthetic: Gate = {
   },
 };
 
-const registry = [...GATES, synthetic];
+const registry: readonly Gate[] = [...GATES, synthetic];
+const packRegistry: readonly PackGate[] = [...PACK_GATES, synthetic];
 
 const policyThresholds = {
   atsMinimum: 0.8, fitMinimumConfidence: 0.5, fitMinimumScore: 0.8,
@@ -36,14 +60,17 @@ const policyThresholds = {
 };
 
 describe("the registry owns the gate set", () => {
-  it("declares every policy gate ID and severity exactly once, in receipt order", () => {
-    const ids = PACK_GATES.map(entry => entry.id);
-    expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toEqual([...REQUIRED_BLOCKING_GATES, ...REQUIRED_ADVISORY_GATES]);
-    for (const entry of PACK_GATES) {
-      const expected = (REQUIRED_BLOCKING_GATES as readonly string[]).includes(entry.id) ? "blocking" : "advisory";
-      expect(entry.severity).toBe(expected);
-    }
+  it("declares the pack lane in receipt order", () => {
+    expect(PACK_GATES.map(entry => entry.id)).toEqual(RECEIPT_ORDER);
+  });
+
+  it("gives every pack gate the severity its ID has always carried", () => {
+    for (const entry of PACK_GATES) expect(`${entry.id}=${entry.severity}`).toBe(`${entry.id}=${RECEIPT_SEVERITY[entry.id]}`);
+  });
+
+  it("projects those same IDs into the policy schema's required set", () => {
+    expect([...REQUIRED_BLOCKING_GATES]).toEqual(RECEIPT_ORDER.filter(id => RECEIPT_SEVERITY[id] === "blocking"));
+    expect([...REQUIRED_ADVISORY_GATES]).toEqual(RECEIPT_ORDER.filter(id => RECEIPT_SEVERITY[id] === "advisory"));
   });
 
   it("keeps every declared gate ID unique across both lanes", () => {
@@ -51,9 +78,18 @@ describe("the registry owns the gate set", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("names a smoke gate-set that resolves against the registry", () => {
+  it("names a smoke gate-set that resolves against the registry, with an invocation for each", () => {
+    const calls = smokeCalls("cv.html", "cv.pdf", name => name);
     expect(SMOKE_SET.length).toBeGreaterThan(0);
-    for (const id of SMOKE_SET) expect(gate(id).command).not.toBeNull();
+    for (const id of SMOKE_SET) {
+      expect(gate(id).command).not.toBeNull();
+      expect(calls).toHaveProperty(id);
+    }
+  });
+
+  it("pins the published help order against the commands actually registered", () => {
+    expect(new Set(COMMAND_ORDER)).toEqual(new Set([...BUILTIN_COMMANDS.keys(), ...gateCommands().map(command => command.name)]));
+    expect(buildProgram().commands.map(command => command.name())).toEqual(COMMAND_ORDER);
   });
 });
 
@@ -71,7 +107,7 @@ describe("adding a gate is one file plus one registration", () => {
   });
 
   it("reaches policy derivation", () => {
-    const schema = verifyPolicySchemaFor(registry);
+    const schema = verifyPolicySchemaFor(packRegistry);
     const policy = {
       schemaVersion: 1,
       gates: [...PACK_GATES.map(entry => ({ id: entry.id, severity: entry.severity })), { id: "synthetic-check", severity: "advisory" }],

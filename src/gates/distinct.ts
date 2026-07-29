@@ -9,7 +9,7 @@
 import { readFileSync, realpathSync } from "node:fs";
 import { loadCanon } from "../canon/load.js";
 import { canonToText } from "./fit.js";
-import { GateInputError, type Gate } from "./gate.js";
+import { GateInputError, type Gate, type PackGate } from "./gate.js";
 import { htmlToText } from "./text.js";
 
 const SHINGLE_WORDS = 8;
@@ -168,7 +168,7 @@ function canonExemptionText(canonPath: string): string {
   ].join("\n");
 }
 
-export const distinctnessGate: Gate = {
+export const distinctnessGate: PackGate = {
   id: "distinctness",
   severity: "advisory",
   run: async input => {

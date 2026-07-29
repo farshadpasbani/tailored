@@ -234,6 +234,29 @@ function addJdPdf(program: Command): void {
     });
 }
 
+/**
+ * How each gate in SMOKE_SET sees the bundled example. Everything else - the thresholds, the
+ * wording, the verdict - comes from the gate itself. Exported so a test can pin that the set
+ * and this table stay in step.
+ */
+export function smokeCalls(html: string, pdf: string, example: (name: string) => string): Record<string, { args: unknown[]; options: Record<string, unknown> }> {
+  return {
+    "ai-tell": { args: [[html]], options: {} },
+    trace: { args: [html], options: { canon: example("canon.yaml") } },
+    impact: { args: [html], options: {} },
+    "page-fit": { args: [pdf], options: { max: "1" } },
+    "fit-blockers": {
+      args: [],
+      options: {
+        requirements: example("requirements.yaml"), jdText: example("job-description.md"),
+        canon: example("canon.yaml"), baselineReceipt: example("baseline-receipt.yaml"),
+        allowCandidateAttested: true,
+      },
+    },
+    "legacy-ats": { args: [pdf], options: { jd: example("jd.yaml") } },
+  };
+}
+
 function addSmoke(program: Command): void {
   program
     .command("smoke")
@@ -246,28 +269,13 @@ function addSmoke(program: Command): void {
       const pdf = join(tmpdir(), `tailored-smoke-${process.pid}.pdf`);
       try { await renderToPdf(html, pdf); }
       catch (e) { fail((e as Error).message); }
-      // How each gate in the named set sees the example. Everything else - the thresholds,
-      // the wording, the verdict - comes from the gate itself.
-      const calls: Record<string, { args: unknown[]; options: Record<string, unknown> }> = {
-        "ai-tell": { args: [[html]], options: {} },
-        trace: { args: [html], options: { canon: example("canon.yaml") } },
-        impact: { args: [html], options: {} },
-        "page-fit": { args: [pdf], options: { max: "1" } },
-        "fit-blockers": {
-          args: [],
-          options: {
-            requirements: example("requirements.yaml"), jdText: example("job-description.md"),
-            canon: example("canon.yaml"), baselineReceipt: example("baseline-receipt.yaml"),
-            allowCandidateAttested: true,
-          },
-        },
-        "legacy-ats": { args: [pdf], options: { jd: example("jd.yaml") } },
-      };
+      const calls = smokeCalls(html, pdf, example);
       let fitVerdict = "";
       for (const id of SMOKE_SET) {
         const command = gate(id).command;
         if (!command) fail(`smoke gate ${id} has no command`);
         const call = calls[id];
+        if (!call) fail(`smoke has no invocation for gate ${id}`);
         let result: ConsoleReport;
         try { result = await command.run(call.args, { ...defaultOptions(command), ...call.options }); }
         catch (error) { fail(`example fails ${id}: ${(error as Error).message}`); }
@@ -290,7 +298,7 @@ function addSmoke(program: Command): void {
  * is the CLI's published help; a newly registered gate appends to the end of it rather than
  * needing an edit here.
  */
-const BUILTIN_COMMANDS = new Map<string, (program: Command) => void>([
+export const BUILTIN_COMMANDS = new Map<string, (program: Command) => void>([
   ["verify-pack", addVerifyPack],
   ["verify-pack-fresh", addVerifyPackFresh],
   ["validate", addValidate],
@@ -302,7 +310,8 @@ const BUILTIN_COMMANDS = new Map<string, (program: Command) => void>([
   ["smoke", addSmoke],
 ]);
 
-const COMMAND_ORDER = [
+/** The published help order. Every registered command must appear here exactly once. */
+export const COMMAND_ORDER = [
   "verify-pack", "verify-pack-fresh", "validate", "migrate-canon", "lint", "page-fit", "ip-guard",
   "ats", "migrate-requirements", "issue-baseline-receipt", "fit", "requirements-ats", "legacy-fit",
   "claim-integrity", "trace", "impact", "distinct", "render", "jd-pdf", "smoke",

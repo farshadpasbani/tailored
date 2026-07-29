@@ -4,7 +4,7 @@
 // the style block); see skill/references/house-style.md for the contract.
 
 import { readFileSync } from "node:fs";
-import { GateInputError, optionName, type Gate, type GateInput } from "./gate.js";
+import { GateInputError, optionName, type GateInput, type PackGate } from "./gate.js";
 import { htmlToText, countWords, lineAt } from "./text.js";
 
 /**
@@ -328,7 +328,7 @@ function packResults(input: GateInput): ImpactResult[] {
   }));
 }
 
-export const impactGate: Gate = {
+export const impactGate: PackGate = {
   id: "impact",
   severity: "advisory",
   run: async input => {
@@ -368,7 +368,7 @@ export const impactGate: Gate = {
  * `accessibility` isolates the font, margin, and line-height floors, which are the ones a
  * reader with low vision cannot work around.
  */
-export const accessibilityGate: Gate = {
+export const accessibilityGate: PackGate = {
   id: "accessibility",
   severity: "advisory",
   run: async input => {

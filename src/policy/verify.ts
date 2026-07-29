@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Gate } from "../gates/gate.js";
+import type { PackGate } from "../gates/gate.js";
 import { PACK_GATES } from "../gates/registry.js";
 
 /**
@@ -7,13 +7,13 @@ import { PACK_GATES } from "../gates/registry.js";
  * a policy.yaml can only name gates that exist and can only give them the severity the
  * registry declares.
  */
-function idsBySeverity(gates: readonly Gate[], severity: "blocking" | "advisory"): [string, ...string[]] {
-  const ids = gates.filter(gate => gate.run !== null && gate.severity === severity).map(gate => gate.id);
+function idsBySeverity(gates: readonly PackGate[], severity: "blocking" | "advisory"): [string, ...string[]] {
+  const ids = gates.filter(gate => gate.severity === severity).map(gate => gate.id);
   if (ids.length === 0) throw new Error(`the gate registry declares no ${severity} pack gate`);
   return ids as [string, ...string[]];
 }
 
-export function verifyPolicySchemaFor(gates: readonly Gate[]) {
+export function verifyPolicySchemaFor(gates: readonly PackGate[]) {
   const blocking = z.enum(idsBySeverity(gates, "blocking"));
   const advisory = z.enum(idsBySeverity(gates, "advisory"));
   const required = [...blocking.options, ...advisory.options];

@@ -11,7 +11,7 @@ import { verifyArtifactResources } from "../evidence/resources.js";
 import { inspectAndPrintDocument, type RenderedClaimMarker, type RenderedDocumentEvidence } from "../render/chrome.js";
 import { loadCanon } from "../canon/load.js";
 import { loadEvidenceFile } from "../evidence/schema.js";
-import { aggregateUpstream, GateInputError, type Gate } from "./gate.js";
+import { aggregateUpstream, GateInputError, type PackGate } from "./gate.js";
 import { extractPdfText } from "./run.js";
 import { tokenizeNumericOccurrences } from "./numeric.js";
 import { htmlToText, lineAt } from "./text.js";
@@ -275,7 +275,7 @@ async function verifyClaimIntegrityInternal(input: VerifyClaimIntegrityInput, ad
   }
 }
 
-export const claimIntegrityGate: Gate = {
+export const claimIntegrityGate: PackGate = {
   id: "claim-integrity",
   severity: "blocking",
   // The pack lane verifies claims inside the staging transaction, against the staged PDF that

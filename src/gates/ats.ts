@@ -1,7 +1,7 @@
 import type { Jd } from "../jd/schema.js";
 import { loadCanon } from "../canon/load.js";
 import { loadJd } from "../jd/load.js";
-import { GateInputError, loadCommandRequirements, ratioOption, RECEIPT_OPTIONS, REQUIREMENTS_OPTIONS, type Gate } from "./gate.js";
+import { GateInputError, loadCommandRequirements, ratioOption, RECEIPT_OPTIONS, REQUIREMENTS_OPTIONS, type Gate, type PackGate } from "./gate.js";
 import { extractPdfText } from "./run.js";
 import { isVerifiedRequirements, type VerifiedRequirements } from "../requirements/schema.js";
 
@@ -67,7 +67,7 @@ export function analyzeRequirementAts(cvText: string, requirements: VerifiedRequ
   return { ...coverage, min, policy, ok: coverage.ratio >= min };
 }
 
-export const atsGate: Gate = {
+export const atsGate: PackGate = {
   id: "ats",
   severity: "advisory",
   run: async input => {

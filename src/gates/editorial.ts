@@ -1,4 +1,4 @@
-import type { Gate } from "./gate.js";
+import type { PackGate } from "./gate.js";
 import { analyzeImpact, defaultImpactOptions } from "./impact.js";
 
 export interface EditorialResult { ok: false; messages: string[]; }
@@ -26,7 +26,7 @@ export function analyzeEditorial(html: string): EditorialResult {
  * Never `ok`: editorial quality is a human judgement, so this gate always raises its
  * observations for review rather than pretending to clear them.
  */
-export const editorialGate: Gate = {
+export const editorialGate: PackGate = {
   id: "editorial",
   severity: "advisory",
   run: async input => ({

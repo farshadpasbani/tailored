@@ -93,6 +93,13 @@ export interface GateCommand {
   run(args: readonly unknown[], options: Record<string, unknown>): Promise<ConsoleReport>;
 }
 
+/**
+ * A gate's two lanes are separate contracts, and neither is derived from the other: `run` and
+ * `command.run` may reach different verdicts from the same document, because they are asked
+ * different questions. `ats` scores a hash-bound requirement map in a receipt and a loose
+ * jd.yaml at a terminal; `fit-blockers` fails a pack on a policy score floor while the `fit`
+ * command exits on its verdict word. What they share is the analysis function underneath.
+ */
 export interface Gate {
   id: string;
   severity: GateSeverity;
@@ -100,6 +107,14 @@ export interface Gate {
   run: ((input: GateInput) => Promise<Finding>) | null;
   /** Terminal lane. `null` for gates with no standalone command. */
   command: GateCommand | null;
+}
+
+/**
+ * A gate the pack lane can run. Declaring a gate at this type is what makes it eligible for a
+ * receipt and for the policy schema's required set; the registry's PACK_GATES is the list.
+ */
+export interface PackGate extends Gate {
+  run: (input: GateInput) => Promise<Finding>;
 }
 
 /** Commander's option name for a flag spec, e.g. `--min-font <pt>` becomes `minFont`. */

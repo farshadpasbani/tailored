@@ -1,23 +1,23 @@
 // The gate registry: the single module that owns which gates exist, their IDs, their
 // severities, their order, and the named sets. policy/verify.ts derives its ID vocabulary
 // from here, verify/pack.ts assembles a receipt from here, and the CLI dispatches from here.
-// Adding a gate is one gate file plus one entry in GATES; anything more is a regression.
+// Adding a gate is one gate file plus one entry below; anything more is a regression.
 //
 // The registry dispatches and normalises. It never re-implements a check: every entry either
 // delegates to a gate module or states, in one line, why the verdict is already settled.
 
-import { analyzeStrategy } from "../strategy/schema.js";
 import { aiTellGate } from "./aiTell.js";
 import { atsGate, legacyAtsGate } from "./ats.js";
 import { claimIntegrityGate } from "./claimIntegrity.js";
 import { distinctnessGate } from "./distinct.js";
 import { editorialGate } from "./editorial.js";
 import { fitBlockersGate, legacyFitGate } from "./fit.js";
-import { aggregateUpstream, type Gate, type GateCommand, type GateInput, type GateSeverity } from "./gate.js";
+import { aggregateUpstream, type Gate, type GateCommand, type GateSeverity, type PackGate } from "./gate.js";
 import { accessibilityGate, impactGate } from "./impact.js";
 import { ipGuardGate, protectedTopicsGate } from "./ipGuard.js";
 import { pageFitGate } from "./pageFit.js";
 import { prohibitedClaimsGate } from "./prohibitedClaims.js";
+import { evidenceAltitudeGate, strategySelectionGate } from "./strategy.js";
 import { traceGate } from "./trace.js";
 
 /**
@@ -25,61 +25,23 @@ import { traceGate } from "./trace.js";
  * the input parses and the corpus snapshot is eligible, so reaching the gate lane is the
  * proof. The finding exists so the receipt records that the check was in force.
  */
-function settled(id: string, severity: GateSeverity): Gate {
+function settled(id: string, severity: GateSeverity): PackGate {
   return { id, severity, run: async () => ({ id, ok: true, messages: [] }), command: null };
 }
 
 /** A gate whose evidence is produced per artifact inside the staging transaction. */
-function aggregated(id: string, severity: GateSeverity): Gate {
+function aggregated(id: string, severity: GateSeverity): PackGate {
   return { id, severity, run: async input => aggregateUpstream(id, input.upstream), command: null };
 }
 
-/** The canon facts and projects a strategy may cite, at the confidence the policy demands. */
-function strategyOf(input: GateInput) {
-  return analyzeStrategy(input.strategy, {
-    projectIds: input.canon.projects.map(project => project.name),
-    facts: input.canon.facts,
-    minConfidence: input.thresholds.fitMinimumConfidence,
-  });
-}
-
-const strategySelectionGate: Gate = {
-  id: "strategy-selection",
-  severity: "advisory",
-  run: async input => {
-    const selection = strategyOf(input).selection;
-    return { id: "strategy-selection", ok: selection.length === 0, messages: selection };
-  },
-  command: null,
-};
-
 /**
- * Never `ok`: whether the evidence sits at the right altitude is a human judgement under
- * strategy schema v1, so this gate always reports for review.
+ * The gates a verify-pack receipt records, in receipt order. Membership is declared, never
+ * inferred from a gate's shape: these IDs and severities are the vocabulary that existing
+ * policy.yaml files and receipts already speak, so adding a line here changes what every
+ * policy file in the world must contain. Giving a terminal-only gate a receipt lane must not
+ * be enough to promote it.
  */
-const evidenceAltitudeGate: Gate = {
-  id: "evidence-altitude",
-  severity: "advisory",
-  run: async input => {
-    return {
-      id: "evidence-altitude",
-      ok: false,
-      messages: [
-        ...strategyOf(input).evidence,
-        ...input.artifacts.filter(artifact => !input.evidence.claims.some(claim => claim.artifact === artifact.id)).map(artifact => `artifact ${artifact.id} has no claim evidence`),
-      ],
-    };
-  },
-  command: null,
-};
-
-/**
- * Every gate the product runs. The first block is the pack lane, in receipt order: its IDs
- * and severities are the vocabulary policy.yaml files and receipts already speak, so this
- * order and this spelling are a compatibility contract. The second block is terminal-only
- * legacy checks that no receipt has ever recorded; they never reach policy or verify-pack.
- */
-export const GATES: readonly Gate[] = [
+export const PACK_GATES: readonly PackGate[] = [
   settled("canon-schema", "blocking"),
   settled("evidence-schema", "blocking"),
   settled("requirements-trust", "blocking"),
@@ -98,7 +60,10 @@ export const GATES: readonly Gate[] = [
   evidenceAltitudeGate,
   editorialGate,
   accessibilityGate,
+];
 
+/** Legacy checks that only ever ran at a terminal. No receipt has recorded one. */
+const TERMINAL_ONLY_GATES: readonly Gate[] = [
   pageFitGate,
   ipGuardGate,
   legacyAtsGate,
@@ -106,8 +71,8 @@ export const GATES: readonly Gate[] = [
   traceGate,
 ];
 
-/** The gates a verify-pack receipt records, in receipt order. */
-export const PACK_GATES: readonly Gate[] = GATES.filter(entry => entry.run !== null);
+/** Every gate the product runs, pack lane first. */
+export const GATES: readonly Gate[] = [...PACK_GATES, ...TERMINAL_ONLY_GATES];
 
 /** Every gate that exposes a standalone CLI command, in registry order. */
 export function gateCommands(gates: readonly Gate[] = GATES): readonly GateCommand[] {

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import yaml from "js-yaml";
 import { loadCanon } from "../canon/load.js";
 import { inspectRenderedDocument, type RenderedDocumentEvidence } from "../render/chrome.js";
-import { GateInputError, type Gate } from "./gate.js";
+import { GateInputError, type Gate, type PackGate } from "./gate.js";
 import { analyzeProhibitedClaims, hasVisibleNumericOccurrences, MetricClaimsFileSchema, type MetricClaim, type NumericExemption } from "./prohibitedClaims.js";
 import { lineAt } from "./text.js";
 export interface IpLeak { term: string; line: number; index: number; }
@@ -17,7 +17,7 @@ export function scanProtected(text: string, terms: string[]): IpLeak[] {
   return leaks.sort((a, b) => a.index - b.index);
 }
 
-export const protectedTopicsGate: Gate = {
+export const protectedTopicsGate: PackGate = {
   id: "protected-topics",
   severity: "blocking",
   run: async input => {

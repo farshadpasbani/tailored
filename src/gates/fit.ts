@@ -3,7 +3,7 @@ import type { Jd } from "../jd/schema.js";
 import { keywordCoverage } from "./ats.js";
 import { loadCanon } from "../canon/load.js";
 import { loadJd } from "../jd/load.js";
-import { GateInputError, loadCommandRequirements, RECEIPT_OPTIONS, REQUIREMENTS_OPTIONS, type Gate } from "./gate.js";
+import { GateInputError, loadCommandRequirements, RECEIPT_OPTIONS, REQUIREMENTS_OPTIONS, type Gate, type PackGate } from "./gate.js";
 import { isVerifiedRequirements, type Requirement, type VerifiedRequirements } from "../requirements/schema.js";
 import type { z } from "zod";
 
@@ -110,7 +110,7 @@ export function fitEvidencePolicy(allowCandidateAttested: boolean): FitEvidenceP
   return { allowCandidateAttested, minConfidence: 0.5, allowedUses: ["fit"], allowedSensitivities: ["public", "private"], allowedProvenanceTypes: ["candidate-attested", "artifact", "external"] };
 }
 
-export const fitBlockersGate: Gate = {
+export const fitBlockersGate: PackGate = {
   id: "fit-blockers",
   severity: "blocking",
   run: async input => {

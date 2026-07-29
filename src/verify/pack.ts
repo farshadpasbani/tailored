@@ -4,7 +4,7 @@ import { z } from "zod";
 import yaml from "js-yaml";
 import { parseCanon } from "../canon/load.js";
 import { parseEvidenceFile, type EvidenceFile } from "../evidence/schema.js";
-import type { Finding, Gate, GateInput } from "../gates/gate.js";
+import type { Finding, GateInput, PackGate } from "../gates/gate.js";
 import { PACK_GATES } from "../gates/registry.js";
 import { extractPdfText } from "../gates/run.js";
 import { pageCount } from "../gates/pageFit.js";
@@ -186,7 +186,7 @@ interface Resolutions { waivers: Waiver[]; attestations: Attestation[]; packSha2
  * gone rather than relocated: one entry per registry gate cannot duplicate an ID, and the
  * policy schema already refuses any policy that does not name exactly the registry's set.
  */
-export async function assembleFindings(input: GateInput, policy: VerifyPolicy, resolutions: Resolutions, gates: readonly Gate[] = PACK_GATES): Promise<PackFinding[]> {
+export async function assembleFindings(input: GateInput, policy: VerifyPolicy, resolutions: Resolutions, gates: readonly PackGate[] = PACK_GATES): Promise<PackFinding[]> {
   const severity = new Map<string, "blocking" | "advisory">(policy.gates.map(gate => [gate.id, gate.severity]));
   const usedResolutions = new Set<string>();
   const resolve = ({ id, ok, messages }: Finding): PackFinding => {
@@ -207,10 +207,7 @@ export async function assembleFindings(input: GateInput, policy: VerifyPolicy, r
     return { id, severity: gateSeverity, ok, messages: stableMessages, disposition: "review-required" };
   };
   const findings: PackFinding[] = [];
-  for (const gate of gates) {
-    if (!gate.run) throw new Error(`gate ${gate.id} has no receipt lane and cannot enter a pack receipt`);
-    findings.push(resolve(await gate.run(input)));
-  }
+  for (const gate of gates) findings.push(resolve(await gate.run(input)));
   if (usedResolutions.size !== resolutions.waivers.length + resolutions.attestations.length) throw new Error("every waiver/attestation must resolve exactly one current finding");
   return findings;
 }
