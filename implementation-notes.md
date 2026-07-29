@@ -728,3 +728,257 @@ private-byte deltas. Per-pack diagnostics and inventory remain external.
   (F2), the `GateInput` breadth that forces the test's cast (F7), `impact` and
   `accessibility` both calling `packResults` (F8), and smoke's inert `0.8` literal
   (card 3).
+
+## Backlog 016: one canon projection, one atomic write, one threshold source
+
+Architecture card 3, stacked on card 1 (backlog 015). Three duplications of
+knowledge removed; no new capability.
+
+### The one canon projection
+
+`src/canon/corpus.ts` replaces `fit.canonToText` and `trace.canonCorpus`. The
+field set is the union of what those two read. The table below is what was
+tabulated before writing any code — a "union" that quietly dropped a field one
+reader depended on was the main risk.
+
+| canon field | fit (canonToText) | trace (canonCorpus) | distinct extras | one projection |
+| --- | --- | --- | --- | --- |
+| identity.name / role | – | yes | yes | yes |
+| identity.location / email / phone | – | yes | yes | yes |
+| identity.links (label + url) | – | – | yes | no (distinct only) |
+| summary | yes | yes | – | yes |
+| skills.label / value | yes | yes | – | yes |
+| projects.name / tagline / bullets | yes | yes | – | yes |
+| projects.links | – | – | yes | no (distinct only) |
+| experience.title / org / bullets | yes | yes | – | yes |
+| experience.start / end | – | yes | yes | yes |
+| experience.location | – | – | yes | no (distinct only) |
+| education.qualification / institution / note | yes | yes | – | yes |
+| education.year / result | – | yes | yes | yes |
+| certifications, publications | yes | yes | – | yes |
+| claims.can | yes | – | yes | yes |
+| facts, numbersThatStand, talkingPoints, positioning, protectedTopics, ipBoundaries, discretion, draftingGuidance, verifiedFacts, projects.year | – | – | – | no |
+
+Two composition facts made this safe to unify, both checked before changing
+anything: `ats.norm` collapses all whitespace before matching, and
+`distinct.normalizeTokens` replaces every non-alphanumeric character with a
+space, so newline-versus-space and part granularity are inert for both readers.
+The numeric tokeniser's patterns are `\s`-based, so they are inert too. What
+matters is only that no two fields are glued into one word.
+
+`distinct` keeps a named extra (`distinctExemptionText`): link strings and an
+entry's location. Stated reason, in the module: exemption is not evidence.
+There a canon phrase only proves "this recurrence is a fact, not a voice tic";
+in the trace corpus a digit inside a URL would pass as proof that a claim is
+grounded. Widening the exemption corpus can only silence a false flag; widening
+the evidence corpus would launder an unproven number.
+
+### Every verdict change, enumerated
+
+Method: a harness ran `legacy-fit`, `trace`, `distinct` (and `fit-blockers` as a
+control that reads no projection) through the registry's command lane over the
+bundled example and a read-only copy of the private downstream vault — 132 real
+`jd.yaml` files, 179 real `cv.html`, 169 real `cover.html`, each distinct run
+against every same-type document as priors — at the merge base and at HEAD.
+832 records, 830 byte-identical, **zero verdict flips**.
+
+1. `legacy-fit`, 2 records (two superseded packs for one ML-engineer role):
+   must-have coverage 33% → 38%, verdict SKIP → SKIP. Causing field:
+   `identity.role`, whose specialism phrase is exactly the JD must-have that had
+   been reported as a gap.
+   Justified: the gate's own gap message asks whether the canon genuinely lacks
+   the term. It does not — the projection was under-reading the canon by
+   ignoring the identity block. Both verdicts unchanged.
+2. `distinctness` pack lane: a signature phrase found verbatim in the canon's
+   identity block is now exempt, as it already was at the terminal. The pack
+   lane used `canonToText` (no identity, no dates) while the command used the
+   wider exemption corpus, so a receipt could flag the candidate's own job title
+   as a voice tic. Proven both ways: the new test in `distinct.test.ts` fails
+   against the merge-base build (message "signature collision … ai engineer
+   agentic systems") and passes at HEAD. Not visible in the harness, which
+   exercises the command lane; the fixture receipt covers the pack lane and its
+   `distinctness` finding is unchanged.
+3. `trace` gained `claims.can` as corpus. No document in the field set changed
+   (0 of 348), and the direction is defensible: a number the canon itself
+   declares as an approved claim is traceable to the canon by definition, and
+   `fit` already treated `claims.can` as canon content.
+
+   Stated plainly, because it is the one loosening in this unit: for the real
+   canon, `claims.can` prose adds five numeric tokens the trace corpus did not
+   have (`30`, `10.`, `3.`, `0.2.0`, `24`), some of them list enumerators inside
+   sentences rather than metrics. A document claiming one of those figures would
+   now trace where it previously would not.
+
+   The reason that is containable rather than a trust regression is where the
+   number is allowed to matter. `traceGate` declares `run: null` — it is
+   terminal-only, so no verify-pack receipt has ever recorded a trace verdict and
+   none can; its own summary says it does not prove semantic truth. The pack lane
+   grounds a number through `claim-integrity`, which binds each claim marker to a
+   record in an evidence file. That is also why `facts` and `numbersThatStand`
+   are excluded from the corpus outright: a keyword sweep must not be able to
+   declare a figure grounded because the canon states it somewhere.
+
+   Accepted on those grounds plus two more: no document in the 348 moved, and the
+   alternative — dropping `claims.can` — would narrow `fit`, which has read it all
+   along, and would not be the union the acceptance requires.
+
+   **Recorded for the owner, NOT changed here (review finding F2):**
+   `untracedNumbers` matches on numeric VALUE alone, with no unit and no context,
+   so a `1. 2. 3.` enumerator anywhere in canon prose grounds any document number
+   sharing that value. The reviewer reproduced it (`3`, `24`, `30`). The defect
+   predates this unit — the corpus has always contained prose — and narrowing the
+   match is a scope change for the owner to rule on. Including `claims.can` was
+   mandated by the union criterion, and it widens the set of enumerators slightly;
+   it does not create the mechanism.
+
+No flip was left as a note; there was no unjustifiable flip to report.
+
+### One atomic write
+
+`src/fs/atomicWrite.ts` replaces three implementations in `cli.ts`. The
+receipt path's property — it must FAIL when the target exists — survives as
+`exclusive`, implemented the same way (link, not rename), and the temporary is
+now removed in a `finally` so it cannot outlive a throw. Each caller still
+phrases its own failure, so stderr is unchanged. `jd-pdf`'s scratch HTML for
+Chrome is deliberately untouched: it is not a durable artefact, and it belongs
+with the renderer split (card 4).
+
+### One threshold source
+
+`src/policy/thresholds.ts` owns the standards. The eight policy-settable numbers
+keep their schema verbatim (still `.strict()`, still no `.default()`, so every
+existing policy.yaml parses exactly as before, and a file still may not omit a
+key); `gate.ts`'s `GateThresholds` is now that schema's inferred type instead of
+a parallel interface. `impact`'s defaults, every CLI flag default (impact's six,
+`ats`/`requirements-ats` `--min`, `page-fit --max`, `distinct`'s two,
+`legacy-fit`'s two), and smoke's inert `0.8` all read it.
+
+Grep proof: outside `policy/thresholds.ts` and tests, `src/` contains no
+threshold literal. The only remaining matches for `1.28|0.8|0.5|60|45|18` are
+`fit.ts`'s three named algorithm constants and a `padding-left: 18px` in the
+archival JD stylesheet.
+
+Deliberate boundary: the fit verdict scale (`STRONG_SCORE`, `MIXED_SCORE`) and
+`TRANSFERABLE_CREDIT` stay in `fit.ts` as named constants. Those define what a
+score means; a policy threshold decides what a document must reach. Coupling
+`fitMinimumScore` to `STRONG_SCORE` would let a stricter policy silently
+redefine the word STRONG.
+
+### Deviations
+
+- **Three files outside the scope contract's allowed paths**, each mandated by the
+  no-threshold-written-twice criterion and each a two-to-four line edit:
+  `gates/ats.ts` and `gates/pageFit.ts` own the `--min` and `--max` flag defaults,
+  and `gates/gate.ts` held the parallel `GateThresholds` interface. Twelve
+  production files in total against a budget of fourteen.
+- **A privacy guard was red on this branch's merge base, and one fix reaches
+  outside the allowed paths.** `no-personal-data.test.ts` only runs its term
+  checks where `.security/denylist.local.txt` exists, and a git worktree does not
+  inherit that untracked file - so the check had been running structure-only here.
+  With the denylist copied in, the private downstream vault's repo name was found
+  in four tracked files: two this unit wrote, plus `backlog/015-gate-registry.md`
+  and the 015 section of these notes, which are green on `main` and red from 015
+  onward. Every occurrence is now the neutral referent "the downstream vault".
+  The seven lines changed in the two work-unit files are name substitutions only,
+  auditable in one diff; no requirement wording moved. A private project name in a
+  public repository is not a defect to walk past to preserve a path boundary.
+
+  Since reported, the base branch has fixed the guard itself (it now resolves the
+  denylist through `--git-common-dir`, so a worktree finds the main checkout's copy,
+  and ships a hashed denylist so the term check also runs in CI). Checked against
+  this tree before handing over: with that newer guard and its hashed list dropped
+  in, all 12 of its checks pass here - so the rebase the coordinator is about to do
+  lands green. It caught one term this remediation batch had introduced, a real
+  employer name quoted inside an example run in these notes; that is now a neutral
+  description.
+
+- **Net production lines are +128, where the plan targeted negative** (+233 / -105
+  across 12 files against the merge base commit `d9d527d`, well inside the 400-line
+  ceiling; tests +317 against 350). Measure against that commit, not against the
+  `015-gate-registry` branch tip: the tip has since advanced with the privacy-guard
+  fix reported below, so a diff against it credits this unit with removing work it
+  never wrote. The
+  duplication removed was numerically small - a threshold literal is one line in
+  each place it appears - while the three new chokepoints carry the reasoning that
+  makes them safe to trust in their doc comments. One simplification pass was run
+  before reporting this: an exported `CANON_CORPUS_FIELDS` array whose only
+  consumer was a test asserting its own contents (the self-referential pin card 1's
+  review called out) is now a doc comment, and the behavioural exclusion test that
+  does the real work stayed.
+
+### Verification
+
+- CLI oracle: 54 invocations (every command's `--help`, `--version`, an unknown
+  command, and real runs including failure paths, both migrate paths, a second
+  `issue-baseline-receipt` to an existing path, and `smoke`) at merge base and
+  HEAD. All 54 identical; the single textual difference is the path of the
+  base-build's own bundled example directory.
+- Fixture receipt: `verify-pack` over `src/verify/fixtures/legacy-pack` on both
+  builds — same 18 findings, same order, same severities, same verdicts, same
+  messages. The receipt's `engine`, `bindings.outputs` PDF hashes and
+  `receiptSha256` differ, because Chrome stamps a creation date into every PDF
+  and the two builds report different revisions; both staged HTML files are
+  byte-identical.
+- Adversarial check on the union: for the real vault canon and the bundled
+  example, every word of the merge-base `canonToText` and of the merge-base
+  `canonCorpus` is present in the new projection (0 dropped, both canons), and
+  every word of the old fit corpus is present in the new distinct exemption
+  text. A "union" that silently dropped a field was the main risk in this unit,
+  so it is checked directly rather than inferred from verdicts matching.
+- `npm test`: 514 passed, 1 skipped, 54 files. `npm run lint:self` clean.
+  `node dist/cli.js smoke` passes (inside the oracle). `production.test.ts`
+  untouched.
+- Cross-repo field test: `npm pack` installed into a scratch copy of the private
+  downstream vault (the live checkout was read from, never written to).
+  `bash scripts/battery.sh --text --vault tests/practice-vault` reports
+  `TEXT PHASE GREEN (14 gates)`; `python3 tests/test_gates.py` reports 46 tests
+  OK. The `ats` warning line that `scripts/ats-decisions.py` greps verbatim is
+  unchanged (only that command's `--min` default expression moved).
+
+### Review remediation (dual review, 2026-07-29)
+
+- **Blocker: `cli.ts` still printed a threshold as a literal.** The smoke PASS line
+  said `(max 1)` forty-five lines below the call that reads
+  `THRESHOLDS.maximumPages` properly, so raising the maximum to 2 would have let
+  smoke accept two pages while announcing one — the same class of defect as the
+  inert `0.8` this unit already fixed in that function. Now
+  `(max ${THRESHOLDS.maximumPages})`. The printed text is unchanged today, because
+  the constant is 1; what changed is that it can no longer disagree. No test guards
+  the sentence: after the fix there is no second value to drift, and pinning it
+  would only assert that string interpolation works.
+- **The policy-settable boundary is compiler-enforced.** `POLICY_DEFAULTS` holds the
+  eight the schema accepts, `as const satisfies GateThresholds` so literal types
+  survive for the callers that render them into flag defaults, and `THRESHOLDS`
+  spreads it and adds the command-only extras. The docstring that said "the first
+  eight" — an ordering convention nothing checked — is gone, and the test's
+  hand-copied list of those eight names (a third copy) is now
+  `ThresholdsSchema.safeParse(POLICY_DEFAULTS)`. No value changed.
+- **`distinct`'s exemption adjacency is restored.** Exemption matches a CONTIGUOUS
+  run, so reordering fields changed which cross-field adjacencies exist: the
+  reviewer reproduced four runs whose exemption status moved (three exempt to
+  flagged, one flagged to exempt) even though no document in the 348 changed. The
+  merge base's `title org location start end` line per job is back, with a comment
+  saying why the apparent duplication is load-bearing, and
+  `distinct.test.ts` now pins the adjacency so the next author cannot tidy it away.
+  Checked on both canons: every rendered entry-header run - the real canon's one job
+  and the example's two, each `title org location start end` - is exemptable at the
+  merge base and at HEAD.
+
+  What no single corpus can restore, stated so it is not mistaken for a miss: any
+  one ordering breaks some cross-FIELD adjacency the merge base's two differently
+  ordered corpora happened to have. For the real canon, 30 four-word runs lose
+  exemptability and 23 gain it - an org glued to a bullet's opening word, an
+  institution glued to a note, a phone glued to the summary. None of them is reachable: `distinct` scans `<p>`/`<li>` only and
+  never merges a run across an element boundary, so no rendered document contains
+  an entry header running into a bullet. The empirical check agrees — 348 real
+  documents, zero changes, before and after this fix.
+- **`canon/corpus.ts` no longer restates its own body.** The six-line prose field
+  list sat three lines above the twelve-line function that is the field list, with
+  nothing keeping them in step. The exclusion rationale stays: that paragraph is
+  load-bearing and `corpus.test.ts` guards it.
+- `CONTEXT.md` gained entries for the two chokepoints a newcomer could not
+  otherwise find (canon corpus, atomic write), including the permanent exclusion
+  decision so it is not re-litigated.
+- Left alone deliberately, recorded for the owner: F2 (`untracedNumbers` matching on
+  numeric value alone — see above), `verify/pack.ts`'s own tmp-then-rename (a fourth
+  instance, outside criterion 3's three), and `corpus.test.ts`'s source-text greps.

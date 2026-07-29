@@ -4,6 +4,7 @@ import type { Canon } from "../canon/schema.js";
 import type { EvidenceFile } from "../evidence/schema.js";
 import { loadRequirements, type ReceiptResolver, type VerifiedRequirements } from "../requirements/schema.js";
 import type { Strategy } from "../strategy/schema.js";
+import type { GateThresholds } from "../policy/thresholds.js";
 import type { PriorDoc } from "./distinct.js";
 
 export type GateSeverity = "blocking" | "advisory";
@@ -19,20 +20,10 @@ export interface Finding { id: string; ok: boolean; messages: string[] }
 export interface GateArtifact { id: string; html: string; pdfText: string }
 
 /**
- * The quality standards a gate reads. The policy schema declares the same eight numbers
- * independently today; giving them one owner is card 3 (policy/thresholds.ts), deliberately
- * out of scope here.
+ * The quality standards a gate reads: the policy schema's own eight numbers, not a parallel
+ * declaration of them. policy/thresholds.ts owns the set (card 3).
  */
-export interface GateThresholds {
-  atsMinimum: number;
-  fitMinimumConfidence: number;
-  fitMinimumScore: number;
-  minimumFontPt: number;
-  minimumMarginMm: number;
-  minimumLineHeight: number;
-  maximumSharedRuns: number;
-  maximumSignaturePhrases: number;
-}
+export type { GateThresholds };
 
 /** Everything the pack lane can show a gate. A gate reads only the members it needs. */
 export interface GateInput {

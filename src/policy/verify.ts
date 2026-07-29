@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { PackGate } from "../gates/gate.js";
 import { PACK_GATES } from "../gates/registry.js";
+import { ThresholdsSchema } from "./thresholds.js";
 
 /**
  * The gate-ID vocabulary has one owner: the registry. These enums are a projection of it, so
@@ -21,16 +22,7 @@ export function verifyPolicySchemaFor(gates: readonly PackGate[]) {
   return z.object({
     schemaVersion: z.literal(1),
     gates: z.array(Gate),
-    thresholds: z.object({
-      atsMinimum: z.number().min(0).max(1),
-      fitMinimumConfidence: z.number().min(0).max(1),
-      fitMinimumScore: z.number().min(0).max(1),
-      minimumFontPt: z.number().positive(),
-      minimumMarginMm: z.number().nonnegative(),
-      minimumLineHeight: z.number().positive(),
-      maximumSharedRuns: z.number().int().nonnegative(),
-      maximumSignaturePhrases: z.number().int().nonnegative(),
-    }).strict(),
+    thresholds: ThresholdsSchema,
   }).strict().superRefine((policy, context) => {
     const counts = new Map<string, number>();
     for (const gate of policy.gates) counts.set(gate.id, (counts.get(gate.id) ?? 0) + 1);

@@ -1,28 +1,15 @@
 import type { Canon, FactV2Schema } from "../canon/schema.js";
 import type { Jd } from "../jd/schema.js";
 import { keywordCoverage } from "./ats.js";
+import { canonCorpus } from "../canon/corpus.js";
 import { loadCanon } from "../canon/load.js";
 import { loadJd } from "../jd/load.js";
 import { GateInputError, loadCommandRequirements, RECEIPT_OPTIONS, REQUIREMENTS_OPTIONS, type Gate, type PackGate } from "./gate.js";
 import { isVerifiedRequirements, type Requirement, type VerifiedRequirements } from "../requirements/schema.js";
+import { THRESHOLDS } from "../policy/thresholds.js";
 import type { z } from "zod";
 
 export type FitVerdict = "APPLY" | "APPLY-WITH-GAPS" | "SKIP";
-
-/** Flatten a canon's textual content (summary, skills, projects, experience,
- * education, certifications, publications, claims) into one searchable string,
- * so a keyword-coverage matcher can be run against it. */
-export function canonToText(canon: Canon): string {
-  const parts: string[] = [];
-  if (canon.summary) parts.push(canon.summary);
-  for (const s of canon.skills) parts.push(`${s.label} ${s.value}`);
-  for (const p of canon.projects) parts.push([p.name, p.tagline, ...p.bullets].filter(Boolean).join(" "));
-  for (const e of canon.experience) parts.push([e.title, e.org, ...e.bullets].join(" "));
-  for (const e of canon.education) parts.push([e.qualification, e.institution, e.note].filter(Boolean).join(" "));
-  parts.push(...canon.certifications, ...canon.publications);
-  if (canon.claims?.can) parts.push(...canon.claims.can);
-  return parts.join("\n");
-}
 
 /** Triage a jd against a canon's flattened text: must-have coverage against the
  * canon's full text (reusing the ats gate's synonym-aware matcher) decides the
@@ -41,6 +28,17 @@ export function validateThresholds(apply: number, floor: number): string | undef
 }
 
 export type RequirementFitVerdict = "STRONG" | "MIXED" | "WEAK" | "BLOCKED";
+
+/**
+ * The fit algorithm's own constants, deliberately NOT in policy/thresholds.ts. Those are
+ * standards a document must meet and a policy.yaml may retune; these three define what the
+ * score means. A policy that raises `fitMinimumScore` decides which packs may proceed - it
+ * must not silently redefine the word STRONG, nor what half-credit evidence is worth.
+ */
+const STRONG_SCORE = 0.8;
+const MIXED_SCORE = 0.5;
+const TRANSFERABLE_CREDIT = 0.5;
+
 export type FitEvidencePolicy = {
   allowCandidateAttested: boolean;
   minConfidence: number;
@@ -89,7 +87,7 @@ export function analyzeRequirementFit(requirements: VerifiedRequirements, canon:
       earnedWeight += requirement.weight;
     } else if (requirement.evidence.kind === "transferable") {
       transferable.push(requirement);
-      earnedWeight += requirement.weight * 0.5;
+      earnedWeight += requirement.weight * TRANSFERABLE_CREDIT;
     } else if (requirement.evidence.kind === "waived") {
       waived.push(requirement);
     } else if (requirement.eligibilityImpact === "none") {
@@ -101,13 +99,13 @@ export function analyzeRequirementFit(requirements: VerifiedRequirements, canon:
   }
   const score = totalWeight === 0 ? 0 : earnedWeight / totalWeight;
   if (!Number.isFinite(totalWeight) || !Number.isFinite(earnedWeight) || !Number.isFinite(score)) throw new RangeError("fit aggregate is non-finite");
-  const verdict: RequirementFitVerdict = hardBlockers.length > 0 ? "BLOCKED" : score >= 0.8 ? "STRONG" : score >= 0.5 ? "MIXED" : "WEAK";
+  const verdict: RequirementFitVerdict = hardBlockers.length > 0 ? "BLOCKED" : score >= STRONG_SCORE ? "STRONG" : score >= MIXED_SCORE ? "MIXED" : "WEAK";
   return { verdict, score, earnedWeight, totalWeight, direct, transferable, materialGaps, waived, hardBlockers, eligibilityUncertainties, reclassified, ineligibleEvidence };
 }
 
 /** The evidence a fit calculation is allowed to spend, given the operator's attestation choice. */
 export function fitEvidencePolicy(allowCandidateAttested: boolean): FitEvidencePolicy {
-  return { allowCandidateAttested, minConfidence: 0.5, allowedUses: ["fit"], allowedSensitivities: ["public", "private"], allowedProvenanceTypes: ["candidate-attested", "artifact", "external"] };
+  return { allowCandidateAttested, minConfidence: THRESHOLDS.fitMinimumConfidence, allowedUses: ["fit"], allowedSensitivities: ["public", "private"], allowedProvenanceTypes: ["candidate-attested", "artifact", "external"] };
 }
 
 export const fitBlockersGate: PackGate = {
@@ -181,8 +179,8 @@ export const legacyFitGate: Gate = {
     options: [
       { flags: "--jd <jd>", description: "path to jd.yaml", required: true },
       { flags: "--canon <canon>", description: "path to canon.yaml", required: true },
-      { flags: "--apply <ratio>", description: "must-have coverage at/above which the verdict is APPLY", default: "0.8" },
-      { flags: "--floor <ratio>", description: "must-have coverage below which the verdict is SKIP", default: "0.5" },
+      { flags: "--apply <ratio>", description: "must-have coverage at/above which the verdict is APPLY", default: String(THRESHOLDS.legacyFitApplyRatio) },
+      { flags: "--floor <ratio>", description: "must-have coverage below which the verdict is SKIP", default: String(THRESHOLDS.legacyFitSkipRatio) },
     ],
     run: async (_args, options) => {
       const apply = Number(options.apply), floor = Number(options.floor);
@@ -194,7 +192,7 @@ export const legacyFitGate: Gate = {
       if (!jd.ok) throw new GateInputError(`invalid jd\n  ${jd.errors.join("\n  ")}`);
       const canon = loadCanon(options.canon as string);
       if (!canon.ok) throw new GateInputError(`invalid canon\n  ${canon.errors.join("\n  ")}`);
-      const result = analyzeFit(canonToText(canon.data), jd.data, { apply, floor });
+      const result = analyzeFit(canonCorpus(canon.data), jd.data, { apply, floor });
       return {
         id: "legacy-fit",
         ok: result.verdict !== "SKIP",

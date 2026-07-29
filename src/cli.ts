@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { linkSync, readFileSync, writeFileSync, realpathSync, renameSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,11 +8,13 @@ import yaml from "js-yaml";
 import { loadCanon } from "./canon/load.js";
 import { migrateCanon } from "./canon/migrate.js";
 import { analyzeAts } from "./gates/ats.js";
+import { atomicWriteFileSync } from "./fs/atomicWrite.js";
 import { defaultOptions, GateInputError, type ConsoleReport, type Gate, type GateCommand } from "./gates/gate.js";
 import { pageCount } from "./gates/pageFit.js";
 import { GATES, gate, gateCommands, SMOKE_SET } from "./gates/registry.js";
 import { extractPdfText } from "./gates/run.js";
 import { loadJd } from "./jd/load.js";
+import { THRESHOLDS } from "./policy/thresholds.js";
 import { issueBaselineReceipt, prepareRequirementsBaseline, RequirementsSchema, sha256Text, type BaselineReceipt } from "./requirements/schema.js";
 import { migrateLegacyJdToRequirements } from "./requirements/migrate.js";
 import { renderToPdf } from "./render/chrome.js";
@@ -123,14 +125,8 @@ function addMigrateCanon(program: Command): void {
         process.stdout.write(rendered);
         return;
       }
-      const temporary = `${output}.tmp-${process.pid}`;
-      try {
-        writeFileSync(temporary, rendered, { encoding: "utf8", flag: "wx" });
-        renameSync(temporary, output);
-      } catch (error) {
-        rmSync(temporary, { force: true });
-        fail(`could not write migrated canon at ${output}: ${(error as Error).message}`);
-      }
+      try { atomicWriteFileSync(output, rendered); }
+      catch (error) { fail(`could not write migrated canon at ${output}: ${(error as Error).message}`); }
       console.log(`PASS: migrated ${input} to strict schemaVersion 2 at ${output} (${result.report.mapped.length} source values mapped)`);
     });
 }
@@ -155,9 +151,8 @@ function addMigrateRequirements(program: Command): void {
       catch (error) { fail((error as Error).message); }
       const rendered = yaml.dump(migrated, { noRefs: true, lineWidth: 100, sortKeys: false });
       if (!output) { process.stdout.write(rendered); return; }
-      const temporary = `${output}.tmp-${process.pid}`;
-      try { writeFileSync(temporary, rendered, { encoding: "utf8", flag: "wx" }); renameSync(temporary, output); }
-      catch (error) { rmSync(temporary, { force: true }); fail(`could not write migrated requirements at ${output}: ${(error as Error).message}`); }
+      try { atomicWriteFileSync(output, rendered); }
+      catch (error) { fail(`could not write migrated requirements at ${output}: ${(error as Error).message}`); }
       console.log(`PASS: migrated legacy keywords to explicit-gap requirements v2 at ${output}`);
     });
 }
@@ -184,9 +179,9 @@ function addIssueBaselineReceipt(program: Command): void {
       if (parsed.data.baseline.canonical !== prepared.canonical || parsed.data.baseline.sha256 !== prepared.sha256) fail("requirements baseline does not match the frozen requirement map");
       if (parsed.data.baseline.receiptSha256 !== issued.sha256) fail("requirements baseline receipt reference does not match this issuer");
       const rendered = yaml.dump(issued, { noRefs: true, lineWidth: 120 });
-      const temporary = `${receiptPath}.tmp-${process.pid}`;
-      try { writeFileSync(temporary, rendered, { encoding: "utf8", flag: "wx" }); linkSync(temporary, receiptPath); rmSync(temporary); }
-      catch (error) { rmSync(temporary, { force: true }); fail(`could not write baseline receipt: ${(error as Error).message}`); }
+      // Exclusive: re-issuing over an existing anchor is a mistake to report, not a write to redo.
+      try { atomicWriteFileSync(receiptPath, rendered, { exclusive: true }); }
+      catch (error) { fail(`could not write baseline receipt: ${(error as Error).message}`); }
       console.log(`PASS: issued external baseline receipt ${issued.sha256} at ${receiptPath}`);
     });
 }
@@ -244,7 +239,7 @@ export function smokeCalls(html: string, pdf: string, example: (name: string) =>
     "ai-tell": { args: [[html]], options: {} },
     trace: { args: [html], options: { canon: example("canon.yaml") } },
     impact: { args: [html], options: {} },
-    "page-fit": { args: [pdf], options: { max: "1" } },
+    "page-fit": { args: [pdf], options: { max: String(THRESHOLDS.maximumPages) } },
     "fit-blockers": {
       args: [],
       options: {
@@ -288,8 +283,8 @@ function addSmoke(program: Command): void {
       const pages = await pageCount(pdf);
       const jd = loadJd(example("jd.yaml"));
       if (!jd.ok) fail(`example jd invalid:\n  ${jd.errors.join("\n  ")}`);
-      const ats = analyzeAts(await extractPdfText(pdf), jd.data, 0.8);
-      console.log(`PASS: smoke rendered ${html} to ${pages} page(s) (max 1), verified fit ${fitVerdict}, legacy ATS coverage ${Math.round(ats.must.ratio * 100)}%, clean of AI tells, every claim traces to the canon, impact clean`);
+      const ats = analyzeAts(await extractPdfText(pdf), jd.data, THRESHOLDS.atsMinimum);
+      console.log(`PASS: smoke rendered ${html} to ${pages} page(s) (max ${THRESHOLDS.maximumPages}), verified fit ${fitVerdict}, legacy ATS coverage ${Math.round(ats.must.ratio * 100)}%, clean of AI tells, every claim traces to the canon, impact clean`);
     });
 }
 

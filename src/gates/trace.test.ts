@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { extractNumericClaims, untracedNumbers, extractTitledEntries, extractProjectNames, checkNamesAndDates, canonCorpus, analyzeTrace } from "./trace.js";
+import { extractNumericClaims, untracedNumbers, extractTitledEntries, extractProjectNames, checkNamesAndDates, analyzeTrace } from "./trace.js";
 import { loadCanon } from "../canon/load.js";
 import type { Canon } from "../canon/schema.js";
 
@@ -177,20 +177,6 @@ describe("checkNamesAndDates", () => {
   it("flags a project name that is not in the canon", () => {
     const r = checkNamesAndDates([], ["Skyforge"], canon);
     expect(r).toEqual([{ kind: "unknown-name", detail: "Skyforge" }]);
-  });
-});
-
-describe("canonCorpus", () => {
-  it("joins the canon's textual fields, including experience bullets", () => {
-    const c: Canon = { ...canon, experience: [{ ...canon.experience[0], bullets: ["Cut review time by 40%."] }] };
-    expect(canonCorpus(c)).toContain("40%");
-  });
-  it("includes identity phone, email, and location so a header phone's digit groups trace", () => {
-    const c: Canon = { ...canon, identity: { ...canon.identity, phone: "+44 117 496 0123", email: "alex@example.com", location: "Bristol, UK" } };
-    const corpus = canonCorpus(c);
-    expect(corpus).toContain("+44 117 496 0123");
-    expect(corpus).toContain("alex@example.com");
-    expect(corpus).toContain("Bristol, UK");
   });
 });
 
