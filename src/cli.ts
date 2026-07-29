@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { linkSync, readFileSync, writeFileSync, realpathSync, renameSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +8,7 @@ import yaml from "js-yaml";
 import { loadCanon } from "./canon/load.js";
 import { migrateCanon } from "./canon/migrate.js";
 import { analyzeAts } from "./gates/ats.js";
+import { atomicWriteFileSync } from "./fs/atomicWrite.js";
 import { defaultOptions, GateInputError, type ConsoleReport, type Gate, type GateCommand } from "./gates/gate.js";
 import { pageCount } from "./gates/pageFit.js";
 import { GATES, gate, gateCommands, SMOKE_SET } from "./gates/registry.js";
@@ -123,14 +124,8 @@ function addMigrateCanon(program: Command): void {
         process.stdout.write(rendered);
         return;
       }
-      const temporary = `${output}.tmp-${process.pid}`;
-      try {
-        writeFileSync(temporary, rendered, { encoding: "utf8", flag: "wx" });
-        renameSync(temporary, output);
-      } catch (error) {
-        rmSync(temporary, { force: true });
-        fail(`could not write migrated canon at ${output}: ${(error as Error).message}`);
-      }
+      try { atomicWriteFileSync(output, rendered); }
+      catch (error) { fail(`could not write migrated canon at ${output}: ${(error as Error).message}`); }
       console.log(`PASS: migrated ${input} to strict schemaVersion 2 at ${output} (${result.report.mapped.length} source values mapped)`);
     });
 }
@@ -155,9 +150,8 @@ function addMigrateRequirements(program: Command): void {
       catch (error) { fail((error as Error).message); }
       const rendered = yaml.dump(migrated, { noRefs: true, lineWidth: 100, sortKeys: false });
       if (!output) { process.stdout.write(rendered); return; }
-      const temporary = `${output}.tmp-${process.pid}`;
-      try { writeFileSync(temporary, rendered, { encoding: "utf8", flag: "wx" }); renameSync(temporary, output); }
-      catch (error) { rmSync(temporary, { force: true }); fail(`could not write migrated requirements at ${output}: ${(error as Error).message}`); }
+      try { atomicWriteFileSync(output, rendered); }
+      catch (error) { fail(`could not write migrated requirements at ${output}: ${(error as Error).message}`); }
       console.log(`PASS: migrated legacy keywords to explicit-gap requirements v2 at ${output}`);
     });
 }
@@ -184,9 +178,9 @@ function addIssueBaselineReceipt(program: Command): void {
       if (parsed.data.baseline.canonical !== prepared.canonical || parsed.data.baseline.sha256 !== prepared.sha256) fail("requirements baseline does not match the frozen requirement map");
       if (parsed.data.baseline.receiptSha256 !== issued.sha256) fail("requirements baseline receipt reference does not match this issuer");
       const rendered = yaml.dump(issued, { noRefs: true, lineWidth: 120 });
-      const temporary = `${receiptPath}.tmp-${process.pid}`;
-      try { writeFileSync(temporary, rendered, { encoding: "utf8", flag: "wx" }); linkSync(temporary, receiptPath); rmSync(temporary); }
-      catch (error) { rmSync(temporary, { force: true }); fail(`could not write baseline receipt: ${(error as Error).message}`); }
+      // Exclusive: re-issuing over an existing anchor is a mistake to report, not a write to redo.
+      try { atomicWriteFileSync(receiptPath, rendered, { exclusive: true }); }
+      catch (error) { fail(`could not write baseline receipt: ${(error as Error).message}`); }
       console.log(`PASS: issued external baseline receipt ${issued.sha256} at ${receiptPath}`);
     });
 }
