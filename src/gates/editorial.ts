@@ -1,3 +1,4 @@
+import type { PackGate } from "./gate.js";
 import { analyzeImpact, defaultImpactOptions } from "./impact.js";
 
 export interface EditorialResult { ok: false; messages: string[]; }
@@ -20,3 +21,18 @@ export function analyzeEditorial(html: string): EditorialResult {
   if (impact.person && !impact.person.ok) messages.push("self-reference: first- and third-person candidate voice are mixed");
   return { ok: false, messages: messages.sort() };
 }
+
+/**
+ * Never `ok`: editorial quality is a human judgement, so this gate always raises its
+ * observations for review rather than pretending to clear them.
+ */
+export const editorialGate: PackGate = {
+  id: "editorial",
+  severity: "advisory",
+  run: async input => ({
+    id: "editorial",
+    ok: false,
+    messages: input.artifacts.flatMap(artifact => analyzeEditorial(artifact.html).messages.map(message => `artifact ${artifact.id}: ${message}`)),
+  }),
+  command: null,
+};
