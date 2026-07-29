@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { createHash } from "node:crypto";
 import { execSync, execFileSync } from "node:child_process";
 
 // WHY THIS FILE LOOKS THE WAY IT DOES.
@@ -165,6 +166,36 @@ describe("no personal data committed", () => {
       });
     }
     expect(hits, `local denylist matches (entry numbers only; read the local file to resolve):\n${hits.join("\n")}`).toEqual([]);
+  });
+
+  /**
+   * The list above is gitignored, so CI has never had one and its check there examines
+   * nothing. This one is committed, so it runs everywhere — and it stores sha256 digests
+   * rather than the terms, because a committed plaintext list of things that must not be
+   * published is itself a publication of them. Add a term with:
+   *   printf '%s' "the-term" | shasum -a 256
+   */
+  it("honours the committed hashed denylist (.security/denylist.hashed.txt, runs in CI)", () => {
+    const digests = new Set(
+      readFileSync(".security/denylist.hashed.txt", "utf8")
+        .split("\n").map(line => line.trim().split("#")[0].trim())
+        .filter(line => /^[a-f0-9]{64}$/.test(line)),
+    );
+    expect(digests.size, "the committed hashed denylist is empty").toBeGreaterThan(0);
+    const hits: string[] = [];
+    for (const f of files) {
+      const haystack = `${f}\n${readFileSync(f, "utf8")}`.toLowerCase();
+      // Tokens keep internal hyphens so a hyphenated repository name stays one token.
+      const tokens = haystack.split(/[^a-z0-9-]+/).filter(Boolean);
+      for (const token of new Set(tokens)) {
+        if (digests.has(createHash("sha256").update(token).digest("hex"))) {
+          // report the file, never the token: this message can reach a public log
+          hits.push(`${f}: matched a hashed denylist entry`);
+          break;
+        }
+      }
+    }
+    expect(hits, `hashed denylist matches (files only; hash a suspect term to identify it):\n${hits.join("\n")}`).toEqual([]);
   });
 
   it("keeps public implementation notes free of raw private audit tables", () => {

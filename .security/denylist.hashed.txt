@@ -1,0 +1,19 @@
+# Hashed denylist — COMMITTED on purpose, so the check runs in CI.
+#
+# The sibling `denylist.local.txt` holds the terms in the clear and is gitignored, which
+# means CI has never had one: its check ran over zero terms and passed. That is how a
+# private repository's name reached a branch of this public package.
+#
+# This file stores sha256 digests instead of terms, because a committed plaintext list of
+# strings that must not be published is itself a publication of them. A digest is useless
+# to a reader who does not already know the term, and sufficient for a machine that only
+# needs to answer "is this token one of them?".
+#
+# The check lowercases text before tokenising, so hash the LOWERCASE form. Tokens keep
+# internal hyphens, so hash a hyphenated name whole.
+#
+#   printf '%s' "the-term" | shasum -a 256
+#
+# One digest per line. Anything after `#` is a comment; keep comments free of the term.
+
+43f20c72f43b303e72ed245b949c4669dba00308f0fc00d5c51a37c5b1a962c8  # a private repository of the author's
