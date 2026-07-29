@@ -41,7 +41,10 @@ export type { PackDescriptor, IssuedVerifyReceipt } from "./verify/pack.js";
 export { VerifyReceiptSchema, FindingSchema } from "./verify/receipt.js";
 export type { VerifyReceipt, PackFinding } from "./verify/receipt.js";
 export { GATES, PACK_GATES, SMOKE_SET, gate, gateCommands } from "./gates/registry.js";
-export type { ConsoleReport, Finding, Gate, GateArtifact, GateCommand, GateInput, GateSeverity, GateThresholds } from "./gates/gate.js";
+// Deliberately narrow: a published package cannot un-export a type without a breaking
+// change, and the CLI-declaration layer (GateCommand, ConsoleReport) and the pack lane's
+// internals (GateArtifact, GateThresholds) are not shapes a consumer should pin.
+export type { Finding, Gate, GateInput, GateSeverity } from "./gates/gate.js";
 export { VerifyPolicySchema, BlockingGateIdSchema, AdvisoryGateIdSchema, REQUIRED_BLOCKING_GATES, REQUIRED_ADVISORY_GATES } from "./policy/verify.js";
 export type { VerifyPolicy } from "./policy/verify.js";
 export { CorpusDescriptorSchema, CorpusMemberSchema, WaiverSchema, AttestationSchema } from "./verify/trust.js";
