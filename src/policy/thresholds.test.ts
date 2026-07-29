@@ -72,8 +72,8 @@ describe("THRESHOLDS", () => {
   });
 
   it("keeps the published flag defaults at the values callers already script against", () => {
-    // Card 3 gave these one home; it must not have moved any of them. job-apply's battery
-    // and every documented example depend on the printed defaults.
+    // Card 3 gave these one home; it must not have moved any of them. The downstream
+    // vault's battery and every documented example depend on the printed defaults.
     expect(flagDefault("ats", "min")).toBe("0.8");
     expect(flagDefault("legacy-fit", "apply")).toBe("0.8");
     expect(flagDefault("legacy-fit", "floor")).toBe("0.5");

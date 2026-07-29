@@ -12,7 +12,7 @@ acceptance:
   - Every gate verdict change caused by the projection unification is
     ENUMERATED and justified before merge - run the affected gates (fit,
     legacy-fit, trace, distinct) over the bundled examples AND over a
-    read-only copy of the job-apply vault's real packs, at merge base and at
+    read-only copy of the downstream vault's real packs, at merge base and at
     HEAD, and record every flip with the field that caused it; a flip that
     cannot be justified as more correct is a blocker, not a note
   - One atomic-write module (fs/atomicWrite.ts) with tmp-then-rename
@@ -29,9 +29,9 @@ acceptance:
     failure paths) matches the merge base except the enumerated projection
     flips, and verify-pack over the fixture pack produces the same 18
     findings in the same order with the same verdicts
-  - Cross-repo field test - the job-apply vault's practice-vault battery
+  - Cross-repo field test - the downstream vault's practice-vault battery
     (--text) and gate-test suite run GREEN against a packed install of THIS
-    build in a scratch copy; the live job-apply checkout is read-only
+    build in a scratch copy; the live downstream checkout is read-only
   - npm test green on the final tree; production.test.ts unchanged; cli.ts
     sheds its fs and threshold concerns (flags in, registry call, exit out)
 convergence:
@@ -80,7 +80,7 @@ linkSync variant exists because it must FAIL when the target exists; the
 unified helper must keep that (the `exclusive` option), not silently
 overwrite a receipt. Threshold values are a compatibility surface: existing
 policy.yaml files carry them, so the schema's shape and its accepted ranges
-must not change - only the DEFAULTS get one home. The job-apply vault consumes
+must not change - only the DEFAULTS get one home. The downstream vault consumes
 this CLI (battery.sh calls commands by name; its ats-decisions gate greps the
 ats command's warning text verbatim), so the cross-repo field test stands.
 This branch stacks on 015 (PR #10, awaiting the owner's review); if 015

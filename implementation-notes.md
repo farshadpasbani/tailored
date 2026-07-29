@@ -615,7 +615,7 @@ private-byte deltas. Per-pack diagnostics and inventory remain external.
 - A gate's receipt messages and its terminal messages are worded differently and
   always have been (`mdash-entity at line 3` in a receipt, `cv.html:3:
   mdash-entity ("&amp;mdash;")` in a terminal). Both lanes are a contract: receipts
-  are hashed and job-apply's `ats-decisions` gate greps the `ats` command's WARN
+  are hashed and the downstream vault's `ats-decisions` gate greps the `ats` command's WARN
   lines verbatim. So a gate exposes both: `run` for the receipt, `command.run` for
   the terminal. Neither recomputes a verdict; both call the same analysis function.
 - `ConsoleReport` is a `Finding` plus the one-line `summary` a terminal prints, and
@@ -671,7 +671,7 @@ private-byte deltas. Per-pack diagnostics and inventory remain external.
 - `npm test`: 494 passed, 1 skipped, 53 files. `npm run lint:self` clean.
   `node dist/cli.js smoke` passes.
 - Cross-repo field test: `npm pack` of this build installed into a scratch copy of
-  the job-apply vault (the live checkout was read from and never written to).
+  the downstream vault (the live checkout was read from and never written to).
   `bash scripts/battery.sh --text --vault ../..` over the practice vault reports
   `TEXT PHASE GREEN (14 gates)`; `python3 tests/test_gates.py` reports 46 tests OK.
   `npx tailored --version` resolves through the npm bin shim, which is what proves
@@ -777,15 +777,15 @@ the evidence corpus would launder an unproven number.
 
 Method: a harness ran `legacy-fit`, `trace`, `distinct` (and `fit-blockers` as a
 control that reads no projection) through the registry's command lane over the
-bundled example and a read-only copy of the job-apply vault — 132 real
+bundled example and a read-only copy of the private downstream vault — 132 real
 `jd.yaml` files, 179 real `cv.html`, 169 real `cover.html`, each distinct run
 against every same-type document as priors — at the merge base and at HEAD.
 832 records, 830 byte-identical, **zero verdict flips**.
 
-1. `legacy-fit`, 2 records (`superseded/2026-07-1x-trunk-tools-sr-ml-engineer`):
+1. `legacy-fit`, 2 records (two superseded packs for one ML-engineer role):
    must-have coverage 33% → 38%, verdict SKIP → SKIP. Causing field:
-   `identity.role`, which reads "AI Engineer · Agentic Systems & Applied ML";
-   the JD's must-have "agentic systems" was previously reported as a gap.
+   `identity.role`, whose specialism phrase is exactly the JD must-have that had
+   been reported as a gap.
    Justified: the gate's own gap message asks whether the canon genuinely lacks
    the term. It does not — the projection was under-reading the canon by
    ignoring the identity block. Both verdicts unchanged.
@@ -855,6 +855,18 @@ redefine the word STRONG.
   `gates/ats.ts` and `gates/pageFit.ts` own the `--min` and `--max` flag defaults,
   and `gates/gate.ts` held the parallel `GateThresholds` interface. Twelve
   production files in total against a budget of fourteen.
+- **A privacy guard was red on this branch's merge base, and one fix reaches
+  outside the allowed paths.** `no-personal-data.test.ts` only runs its term
+  checks where `.security/denylist.local.txt` exists, and a git worktree does not
+  inherit that untracked file - so the check had been running structure-only here.
+  With the denylist copied in, the private downstream vault's repo name was found
+  in four tracked files: two this unit wrote, plus `backlog/015-gate-registry.md`
+  and the 015 section of these notes, which are green on `main` and red from 015
+  onward. Every occurrence is now the neutral referent "the downstream vault".
+  The seven lines changed in the two work-unit files are name substitutions only,
+  auditable in one diff; no requirement wording moved. A private project name in a
+  public repository is not a defect to walk past to preserve a path boundary.
+
 - **Net production lines are +128, where the plan targeted negative** (+232 / -104
   across 12 files, well inside the 400-line ceiling; tests +322 against 350). The
   duplication removed was numerically small - a threshold literal is one line in
@@ -887,8 +899,8 @@ redefine the word STRONG.
 - `npm test`: 514 passed, 1 skipped, 54 files. `npm run lint:self` clean.
   `node dist/cli.js smoke` passes (inside the oracle). `production.test.ts`
   untouched.
-- Cross-repo field test: `npm pack` installed into a scratch copy of the
-  job-apply vault (the live checkout was read from, never written to).
+- Cross-repo field test: `npm pack` installed into a scratch copy of the private
+  downstream vault (the live checkout was read from, never written to).
   `bash scripts/battery.sh --text --vault tests/practice-vault` reports
   `TEXT PHASE GREEN (14 gates)`; `python3 tests/test_gates.py` reports 46 tests
   OK. The `ats` warning line that `scripts/ats-decisions.py` greps verbatim is

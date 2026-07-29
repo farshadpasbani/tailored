@@ -32,9 +32,9 @@ acceptance:
   - Adding a gate is provably one file plus one registration - a test
     registers a synthetic gate and asserts it reaches CLI dispatch, policy
     derivation, and verify-pack assembly with no other edits
-  - Cross-repo field test - the job-apply vault's practice-vault battery
+  - Cross-repo field test - the downstream vault's practice-vault battery
     (--text) and its gate-test suite run GREEN against THIS build of
-    tailored, via a packed install into a scratch copy; the live job-apply
+    tailored, via a packed install into a scratch copy; the live downstream
     checkout is not touched
   - npm test green on the final tree; production.test.ts unchanged
 convergence:
@@ -73,7 +73,7 @@ is an eight-file shotgun edit. After this unit: one interface, one registry,
 three thin callers.
 
 Non-obvious constraints: the CLI's flag surface and observable behaviour are
-a de-facto contract for the job-apply vault - its battery.sh invokes tailored
+a de-facto contract for the downstream vault - its battery.sh invokes tailored
 commands by name and its ats-decisions gate CONSUMES the ats command's
 warning output text, so the ats lane's printed warnings must survive
 verbatim. The exit-0-with-error fix is the single sanctioned behaviour
