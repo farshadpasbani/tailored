@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { checkDistinct } from "./distinct.js";
+import { checkDistinct, distinctExemptionText, distinctnessGate } from "./distinct.js";
+import type { Canon } from "../canon/schema.js";
+import type { GateInput } from "./gate.js";
 
 const wrap = (body: string) => `<!doctype html><html><head><style>body{}</style></head><body>${body}</body></html>`;
 
@@ -182,5 +184,46 @@ describe("checkDistinct signature phrases", () => {
       { canonText },
     );
     expect(r.signatures.length).toBeGreaterThan(0);
+  });
+});
+
+describe("distinctExemptionText", () => {
+  const canon: Canon = {
+    schemaVersion: 2,
+    identity: {
+      name: "Alex Rivers", role: "AI Engineer, Agentic Systems",
+      links: [{ label: "GitHub", url: "https://github.com/alex" }],
+    },
+    skills: [], projects: [],
+    experience: [{ title: "Engineer", org: "Meridian Labs", location: "Bristol", start: "2022", end: "Present", bullets: ["Shipped a service."] }],
+    education: [], certifications: [], publications: [], protectedTopics: [],
+    verifiedFacts: {}, talkingPoints: {}, ipBoundaries: {} as never, discretion: {}, draftingGuidance: {}, facts: [],
+  } as unknown as Canon;
+
+  const doc = (p: string) => wrap(`<p>${p}</p>`);
+
+  it("adds the link and location strings the trace corpus withholds", () => {
+    const text = distinctExemptionText(canon);
+    expect(text).toContain("https://github.com/alex");
+    expect(text).toContain("Meridian Labs Bristol");
+    // and still carries the projection itself
+    expect(text).toContain("AI Engineer, Agentic Systems");
+  });
+
+  it("exempts a canonical identity phrase in the pack lane, not only at the terminal", async () => {
+    // Only the four canon words recur in both priors; the glue around them differs, so the
+    // maximal recurring run is exactly the canon's identity.role and nothing more.
+    const phrase = "ai engineer agentic systems";
+    const finding = await distinctnessGate.run({
+      artifacts: [{ id: "cover", html: doc(`Consider me your ${phrase} always.`), pdfText: "" }],
+      canon,
+      priors: [
+        { name: "a.html", html: doc(`Hiring an ${phrase} quickly now.`) },
+        { name: "b.html", html: doc(`Become the ${phrase} people trust.`) },
+      ],
+      thresholds: { maximumSharedRuns: 0, maximumSignaturePhrases: 0 },
+    } as unknown as GateInput);
+    expect(finding.messages).toEqual([]);
+    expect(finding.ok).toBe(true);
   });
 });

@@ -7,8 +7,9 @@
 // repeat (education, certifications) can be excluded by name.
 
 import { readFileSync, realpathSync } from "node:fs";
+import { canonCorpus } from "../canon/corpus.js";
 import { loadCanon } from "../canon/load.js";
-import { canonToText } from "./fit.js";
+import type { Canon } from "../canon/schema.js";
 import { GateInputError, type Gate, type PackGate } from "./gate.js";
 import { htmlToText } from "./text.js";
 
@@ -150,29 +151,38 @@ export function checkDistinct(newHtml: string, priors: PriorDoc[], opts: Distinc
 }
 
 /**
- * The exemption corpus is every fact the canon states, including the identity and date
- * fields canonToText (a skills-matching corpus) leaves out.
+ * The exemption corpus: the one canon projection, plus the three rendered strings the
+ * projection deliberately withholds - link labels and URLs, and an entry's location. Those
+ * stay a distinct concern rather than folding into canon/corpus.ts because exemption is not
+ * evidence: here a canon phrase only proves "this recurrence is a fact, not a voice tic",
+ * whereas in the trace corpus a digit inside a URL would pass as proof that a claim is
+ * grounded. Widening this corpus can only silence a false flag; widening that one would
+ * launder an unproven number.
  */
-function canonExemptionText(canonPath: string): string {
+export function distinctExemptionText(canon: Canon): string {
+  return [
+    canonCorpus(canon),
+    ...(canon.identity.links ?? []).map(link => `${link.label} ${link.url}`),
+    ...canon.projects.flatMap(project => (project.links ?? []).map(link => `${link.label} ${link.url}`)),
+    // Keeps the org-location adjacency a rendered "Meridian Labs, Bristol" line reads as.
+    ...canon.experience.flatMap(entry => entry.location ? [`${entry.org} ${entry.location}`] : []),
+  ].join("\n");
+}
+
+function loadExemptionText(canonPath: string): string {
   const canon = loadCanon(canonPath);
   if (!canon.ok) throw new GateInputError(`invalid canon\n  ${canon.errors.join("\n  ")}`);
-  const data = canon.data;
-  return [
-    canonToText(data),
-    data.identity.name, data.identity.role,
-    data.identity.location ?? "", data.identity.email ?? "", data.identity.phone ?? "",
-    ...(data.identity.links ?? []).map(link => `${link.label} ${link.url}`),
-    ...data.experience.flatMap(entry => [`${entry.title} ${entry.org} ${entry.location ?? ""} ${entry.start} ${entry.end}`]),
-    ...data.education.map(entry => `${entry.qualification} ${entry.institution} ${entry.year} ${entry.result ?? ""}`),
-    ...data.projects.flatMap(project => (project.links ?? []).map(link => `${link.label} ${link.url}`)),
-  ].join("\n");
+  return distinctExemptionText(canon.data);
 }
 
 export const distinctnessGate: PackGate = {
   id: "distinctness",
   severity: "advisory",
   run: async input => {
-    const canonText = canonToText(input.canon);
+    // Both lanes ask the same question of the same corpus; before card 3 the pack lane
+    // exempted less than the command did, so a receipt could flag a canonical fact the
+    // terminal had already ruled a fact.
+    const canonText = distinctExemptionText(input.canon);
     const results = input.artifacts.map(artifact => checkDistinct(artifact.html, input.priors, {
       maxShared: input.thresholds.maximumSharedRuns,
       maxSignatures: input.thresholds.maximumSignaturePhrases,
@@ -206,7 +216,7 @@ export const distinctnessGate: PackGate = {
       const maxShared = Number(options.maxShared);
       const maxSignatures = Number(options.maxSignatures);
       if (![maxShared, maxSignatures].every(value => Number.isFinite(value) && value >= 0)) throw new GateInputError("--max-shared and --max-signatures must be non-negative numbers");
-      const canonText = options.canon ? canonExemptionText(options.canon as string) : undefined;
+      const canonText = options.canon ? loadExemptionText(options.canon as string) : undefined;
       let content: string;
       try { content = readFileSync(html, "utf8"); }
       catch (error) { throw new GateInputError(`cannot read ${html}: ${(error as Error).message}`); }

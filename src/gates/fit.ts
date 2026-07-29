@@ -1,6 +1,7 @@
 import type { Canon, FactV2Schema } from "../canon/schema.js";
 import type { Jd } from "../jd/schema.js";
 import { keywordCoverage } from "./ats.js";
+import { canonCorpus } from "../canon/corpus.js";
 import { loadCanon } from "../canon/load.js";
 import { loadJd } from "../jd/load.js";
 import { GateInputError, loadCommandRequirements, RECEIPT_OPTIONS, REQUIREMENTS_OPTIONS, type Gate, type PackGate } from "./gate.js";
@@ -8,21 +9,6 @@ import { isVerifiedRequirements, type Requirement, type VerifiedRequirements } f
 import type { z } from "zod";
 
 export type FitVerdict = "APPLY" | "APPLY-WITH-GAPS" | "SKIP";
-
-/** Flatten a canon's textual content (summary, skills, projects, experience,
- * education, certifications, publications, claims) into one searchable string,
- * so a keyword-coverage matcher can be run against it. */
-export function canonToText(canon: Canon): string {
-  const parts: string[] = [];
-  if (canon.summary) parts.push(canon.summary);
-  for (const s of canon.skills) parts.push(`${s.label} ${s.value}`);
-  for (const p of canon.projects) parts.push([p.name, p.tagline, ...p.bullets].filter(Boolean).join(" "));
-  for (const e of canon.experience) parts.push([e.title, e.org, ...e.bullets].join(" "));
-  for (const e of canon.education) parts.push([e.qualification, e.institution, e.note].filter(Boolean).join(" "));
-  parts.push(...canon.certifications, ...canon.publications);
-  if (canon.claims?.can) parts.push(...canon.claims.can);
-  return parts.join("\n");
-}
 
 /** Triage a jd against a canon's flattened text: must-have coverage against the
  * canon's full text (reusing the ats gate's synonym-aware matcher) decides the
@@ -194,7 +180,7 @@ export const legacyFitGate: Gate = {
       if (!jd.ok) throw new GateInputError(`invalid jd\n  ${jd.errors.join("\n  ")}`);
       const canon = loadCanon(options.canon as string);
       if (!canon.ok) throw new GateInputError(`invalid canon\n  ${canon.errors.join("\n  ")}`);
-      const result = analyzeFit(canonToText(canon.data), jd.data, { apply, floor });
+      const result = analyzeFit(canonCorpus(canon.data), jd.data, { apply, floor });
       return {
         id: "legacy-fit",
         ok: result.verdict !== "SKIP",
