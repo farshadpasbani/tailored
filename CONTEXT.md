@@ -13,12 +13,17 @@ interface Gate {
   id: GateId
   severity: "blocking" | "advisory"
   run(input: GateInput): Promise<Finding>
+  command: GateCommand | null
 }
 ```
 
 Bespoke result structs (verdict strings, multi-field analyses) are gate
 implementation, not interface. A gate that wants to expose rich detail exports
 a separate analysis function; the gate lane only speaks Finding.
+
+`run` and `command.run` may reach different verdicts from the same document; the
+receipt lane and the terminal lane are separate contracts, and neither is derived
+from the other. What they share is the analysis function underneath.
 
 ## Finding
 

@@ -668,7 +668,7 @@ private-byte deltas. Per-pack diagnostics and inventory remain external.
   `impact` cases, and `verify-pack`'s receipt digest, which differs between two
   consecutive runs of the merge-base build as well, because Chrome stamps a
   creation date into the PDF. The receipt's findings are byte-identical.
-- `npm test`: 492 passed, 1 skipped, 53 files. `npm run lint:self` clean.
+- `npm test`: 494 passed, 1 skipped, 53 files. `npm run lint:self` clean.
   `node dist/cli.js smoke` passes.
 - Cross-repo field test: `npm pack` of this build installed into a scratch copy of
   the job-apply vault (the live checkout was read from and never written to).
@@ -688,3 +688,43 @@ private-byte deltas. Per-pack diagnostics and inventory remain external.
   `gate.ts` and `registry.ts` (about 300 lines) plus one `run` per pack gate.
   Speculative surface was stripped before reporting this: an unused
   `DEFAULT_THRESHOLDS`, two duplicated analysis blocks, and three index exports.
+
+### Review remediation (dual review, 2026-07-29)
+
+- **Pack-lane membership is declared, not inferred.** `PACK_GATES` was
+  `GATES.filter(entry => entry.run !== null)`, so giving a terminal-only gate a
+  receipt lane silently promoted it to a required policy gate and every existing
+  policy.yaml started failing. `PACK_GATES` is now a written-out list of the
+  eighteen and `GATES` is `[...PACK_GATES, ...TERMINAL_ONLY_GATES]`. Two probes:
+  giving `legacy-fit` a `run()` leaves `PACK_GATES` at eighteen and the fixture
+  policy parsing; adding it to the declared list fails four independent
+  assertions.
+- A new `PackGate` type (a `Gate` whose `run` is required) is what `PACK_GATES`,
+  `verifyPolicySchemaFor`, and `assembleFindings` accept. That deletes the
+  `run !== null` filter in `policy/verify.ts` and the unreachable guard in
+  `assembleFindings`, and each pack gate now declares its lane at its definition.
+- `strategy-selection` and `evidence-altitude` moved out of the registry into
+  `src/gates/strategy.ts`. The registry's own rule (it delegates, it never
+  implements) is now true of every entry, and a grep of `src/gates/` finds them.
+- Test pins that do not derive from the thing they check: `registry.test.ts` holds
+  a hand-written list of the eighteen IDs in receipt order and a hand-written
+  severity map, and asserts the policy schema's required set against the same
+  literals. The old assertion compared `PACK_GATES` against a projection of
+  itself, and incidentally pinned an all-blocking-then-all-advisory ordering that
+  a legal new advisory gate would have broken.
+- `COMMAND_ORDER` is now pinned twice: its set equals the builtins plus every
+  registry command, and `buildProgram()` registers exactly it, in order. A renamed
+  gate command used to slide silently to the end of the published help.
+- `smokeCalls` is hoisted out of the smoke action and exported, so a test asserts
+  every `SMOKE_SET` ID has an invocation. The action also fails cleanly on a
+  missing one instead of throwing on `undefined.args`.
+- Public API narrowed on the owner's ruling: `index.ts` exports `Gate`, `Finding`,
+  `GateInput`, and `GateSeverity` only. `GateCommand`, `ConsoleReport`,
+  `GateArtifact`, `GateThresholds`, and `PackGate` stay internal, because a
+  published package cannot un-export a type without a breaking change and the
+  CLI-declaration layer is not a shape a consumer should pin. `index.test.ts`
+  checks the built `dist/index.d.ts`, not the source.
+- Deferred by ruling, not fixed here: decorative severities on terminal-only gates
+  (F2), the `GateInput` breadth that forces the test's cast (F7), `impact` and
+  `accessibility` both calling `packResults` (F8), and smoke's inert `0.8` literal
+  (card 3).
