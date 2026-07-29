@@ -883,8 +883,21 @@ redefine the word STRONG.
   auditable in one diff; no requirement wording moved. A private project name in a
   public repository is not a defect to walk past to preserve a path boundary.
 
-- **Net production lines are +122, where the plan targeted negative** (+226 / -104
-  across 12 files, well inside the 400-line ceiling; tests +317 against 350). The
+  Since reported, the base branch has fixed the guard itself (it now resolves the
+  denylist through `--git-common-dir`, so a worktree finds the main checkout's copy,
+  and ships a hashed denylist so the term check also runs in CI). Checked against
+  this tree before handing over: with that newer guard and its hashed list dropped
+  in, all 12 of its checks pass here - so the rebase the coordinator is about to do
+  lands green. It caught one term this remediation batch had introduced, a real
+  employer name quoted inside an example run in these notes; that is now a neutral
+  description.
+
+- **Net production lines are +128, where the plan targeted negative** (+233 / -105
+  across 12 files against the merge base commit `d9d527d`, well inside the 400-line
+  ceiling; tests +317 against 350). Measure against that commit, not against the
+  `015-gate-registry` branch tip: the tip has since advanced with the privacy-guard
+  fix reported below, so a diff against it credits this unit with removing work it
+  never wrote. The
   duplication removed was numerically small - a threshold literal is one line in
   each place it appears - while the three new chokepoints carry the reasoning that
   makes them safe to trust in their doc comments. One simplification pass was run
@@ -947,16 +960,15 @@ redefine the word STRONG.
   merge base's `title org location start end` line per job is back, with a comment
   saying why the apparent duplication is load-bearing, and
   `distinct.test.ts` now pins the adjacency so the next author cannot tidy it away.
-  Checked on both canons: every rendered entry-header run
-  (`senior structural engineer wsp cambridge uk 2022 present` and the example's two)
-  is exemptable at the merge base and at HEAD.
+  Checked on both canons: every rendered entry-header run - the real canon's one job
+  and the example's two, each `title org location start end` - is exemptable at the
+  merge base and at HEAD.
 
   What no single corpus can restore, stated so it is not mistaken for a miss: any
   one ordering breaks some cross-FIELD adjacency the merge base's two differently
   ordered corpora happened to have. For the real canon, 30 four-word runs lose
-  exemptability and 23 gain it — org glued to a bullet's opening word
-  (`engineer wsp production tooling`), institution glued to a note, phone glued to
-  the summary. None of them is reachable: `distinct` scans `<p>`/`<li>` only and
+  exemptability and 23 gain it - an org glued to a bullet's opening word, an
+  institution glued to a note, a phone glued to the summary. None of them is reachable: `distinct` scans `<p>`/`<li>` only and
   never merges a run across an element boundary, so no rendered document contains
   an entry header running into a bullet. The empirical check agrees — 348 real
   documents, zero changes, before and after this fix.
