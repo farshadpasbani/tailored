@@ -165,8 +165,12 @@ export function distinctExemptionText(canon: Canon): string {
     canonCorpus(canon),
     ...(canon.identity.links ?? []).map(link => `${link.label} ${link.url}`),
     ...canon.projects.flatMap(project => (project.links ?? []).map(link => `${link.label} ${link.url}`)),
-    // Keeps the org-location adjacency a rendered "Meridian Labs, Bristol" line reads as.
-    ...canon.experience.flatMap(entry => entry.location ? [`${entry.org} ${entry.location}`] : []),
+    // One line per job, in rendered order, because this corpus is searched for CONTIGUOUS
+    // runs: an entry header reads "Engineer, Meridian Labs, Bristol - 2022 to Present", and a
+    // recurring run that spans title into org into location is a canon fact, not a voice tic.
+    // The projection cannot supply this - it withholds location - so do not "tidy" the
+    // apparent duplication away; distinct.test.ts pins the adjacency.
+    ...canon.experience.map(entry => `${entry.title} ${entry.org} ${entry.location ?? ""} ${entry.start} ${entry.end}`),
   ].join("\n");
 }
 

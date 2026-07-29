@@ -7,15 +7,8 @@ import type { Canon } from "./schema.js";
 
 /**
  * Every fact-bearing text field of a canon: what a keyword matcher searches, what a numeric
- * claim traces to, and what an anti-template exemption is measured against. Exactly these
- * fields, and no others:
- *
- *   identity.name, identity.role, identity.location, identity.email, identity.phone,
- *   summary, skills.label, skills.value, projects.name, projects.tagline,
- *   projects.bullets, experience.title, experience.org, experience.start,
- *   experience.end, experience.bullets, education.qualification,
- *   education.institution, education.year, education.result, education.note,
- *   certifications, publications, claims.can
+ * claim traces to, and what an anti-template exemption is measured against. The body below is
+ * the field list; what matters here is what it leaves out.
  *
  * Deliberately absent: `facts`, `numbersThatStand`, `talkingPoints`, `positioning`,
  * `protectedTopics`, `ipBoundaries`, `discretion`, `draftingGuidance`, `verifiedFacts`, and

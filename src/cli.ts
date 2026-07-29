@@ -284,7 +284,7 @@ function addSmoke(program: Command): void {
       const jd = loadJd(example("jd.yaml"));
       if (!jd.ok) fail(`example jd invalid:\n  ${jd.errors.join("\n  ")}`);
       const ats = analyzeAts(await extractPdfText(pdf), jd.data, THRESHOLDS.atsMinimum);
-      console.log(`PASS: smoke rendered ${html} to ${pages} page(s) (max 1), verified fit ${fitVerdict}, legacy ATS coverage ${Math.round(ats.must.ratio * 100)}%, clean of AI tells, every claim traces to the canon, impact clean`);
+      console.log(`PASS: smoke rendered ${html} to ${pages} page(s) (max ${THRESHOLDS.maximumPages}), verified fit ${fitVerdict}, legacy ATS coverage ${Math.round(ats.must.ratio * 100)}%, clean of AI tells, every claim traces to the canon, impact clean`);
     });
 }
 

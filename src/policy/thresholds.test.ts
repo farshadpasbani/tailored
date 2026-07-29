@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { THRESHOLDS, ThresholdsSchema } from "./thresholds.js";
+import { POLICY_DEFAULTS, THRESHOLDS, ThresholdsSchema } from "./thresholds.js";
 import { VerifyPolicySchema } from "./verify.js";
 import { defaultImpactOptions } from "../gates/impact.js";
 import { defaultOptions } from "../gates/gate.js";
@@ -15,17 +15,10 @@ function flagDefault(id: string, option: string): unknown {
 
 describe("THRESHOLDS", () => {
   it("is itself a valid policy threshold set, so the defaults cannot drift outside the accepted ranges", () => {
-    const parsed = ThresholdsSchema.safeParse({
-      atsMinimum: THRESHOLDS.atsMinimum,
-      fitMinimumConfidence: THRESHOLDS.fitMinimumConfidence,
-      fitMinimumScore: THRESHOLDS.fitMinimumScore,
-      minimumFontPt: THRESHOLDS.minimumFontPt,
-      minimumMarginMm: THRESHOLDS.minimumMarginMm,
-      minimumLineHeight: THRESHOLDS.minimumLineHeight,
-      maximumSharedRuns: THRESHOLDS.maximumSharedRuns,
-      maximumSignaturePhrases: THRESHOLDS.maximumSignaturePhrases,
-    });
-    expect(parsed.success).toBe(true);
+    // No hand-copied key list: POLICY_DEFAULTS is the eight the schema accepts, and the
+    // compiler already holds it to that shape via `satisfies`.
+    expect(ThresholdsSchema.safeParse(POLICY_DEFAULTS).success).toBe(true);
+    expect(THRESHOLDS).toMatchObject(POLICY_DEFAULTS);
   });
 
   it("is the set the policy schema accepts - one shape, not two declarations of it", () => {

@@ -210,6 +210,13 @@ describe("distinctExemptionText", () => {
     expect(text).toContain("AI Engineer, Agentic Systems");
   });
 
+  it("keeps each job's fields adjacent, because exemption matches a contiguous run", () => {
+    // A rendered entry header runs title, org, location, dates together, so a recurring run
+    // that spans them is a canon fact. The projection withholds location, which would break
+    // the run in the middle; this line is why the apparent duplication above must stay.
+    expect(distinctExemptionText(canon)).toContain("Engineer Meridian Labs Bristol 2022 Present");
+  });
+
   it("exempts a canonical identity phrase in the pack lane, not only at the terminal", async () => {
     // Only the four canon words recur in both priors; the glue around them differs, so the
     // maximal recurring run is exactly the canon's identity.role and nothing more.

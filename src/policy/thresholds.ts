@@ -27,12 +27,12 @@ export const ThresholdsSchema = z.object({
 export type GateThresholds = z.infer<typeof ThresholdsSchema>;
 
 /**
- * The default value of every quality standard: what the gate commands, the impact analysis,
- * and smoke use when no policy.yaml is in force. The first eight are the policy-settable set
- * above; the rest are standards only a command applies today, kept here so that no threshold
- * is written twice in src/.
+ * The default value of every policy-settable quality standard: what a gate uses when no
+ * policy.yaml is in force. `satisfies` rather than a type annotation, so each value keeps its
+ * literal type for the callers that render it into a flag default, while the compiler - not a
+ * comment - holds this object to exactly the set the policy schema accepts.
  */
-export const THRESHOLDS = {
+export const POLICY_DEFAULTS = {
   /** Must-have keyword coverage a rendered CV has to reach. */
   atsMinimum: 0.8,
   /** Confidence a canon fact needs before it may award fit weight. */
@@ -46,6 +46,15 @@ export const THRESHOLDS = {
   /** Anti-template tolerances: zero shared runs and zero signature phrases. */
   maximumSharedRuns: 0,
   maximumSignaturePhrases: 0,
+} as const satisfies GateThresholds;
+
+/**
+ * Every standard, policy-settable or not. The extras below are standards only a command
+ * applies today, so no policy.yaml names them; they live here because a threshold written
+ * twice in src/ is the duplication this module exists to end.
+ */
+export const THRESHOLDS = {
+  ...POLICY_DEFAULTS,
   /** Word caps for the six-second skim. */
   summaryMaxWords: 60,
   bulletMaxWords: 45,
