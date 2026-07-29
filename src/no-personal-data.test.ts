@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
-import { execSync } from "node:child_process";
+import { dirname, join } from "node:path";
+import { execSync, execFileSync } from "node:child_process";
 
 // WHY THIS FILE LOOKS THE WAY IT DOES.
 //
@@ -57,11 +58,30 @@ const homePath = /(?:\/Users\/|\/home\/|C:\\Users\\)[A-Za-z0-9._-]+/;
  */
 interface LocalEntry { test: (haystack: string) => boolean; allowedIn: string[] }
 
-function localEntries(): LocalEntry[] {
-  let lines: string[];
+/**
+ * The denylist is gitignored, so a git worktree does not have one: `readFileSync` threw,
+ * `localEntries` returned nothing, and the term checks passed while examining zero terms.
+ * That is how the downstream vault's repo name reached a branch of this public package.
+ * A worktree's `.git` is a file pointing at the main checkout, so resolve the common dir
+ * and read the list from there too, and say out loud when no list was found.
+ */
+function denylistCandidates(): string[] {
+  const here = ".security/denylist.local.txt";
   try {
-    lines = readFileSync(".security/denylist.local.txt", "utf8").split("\n");
-  } catch { return []; }
+    const common = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], { encoding: "utf8" }).trim();
+    return [here, join(dirname(common), here)];
+  } catch { return [here]; }
+}
+
+function localEntries(): LocalEntry[] {
+  let lines: string[] | undefined;
+  for (const candidate of denylistCandidates()) {
+    try { lines = readFileSync(candidate, "utf8").split("\n"); break; } catch { /* try the next */ }
+  }
+  if (!lines) {
+    console.warn("no-personal-data: NO local denylist found — the term checks below examined zero terms");
+    return [];
+  }
   return lines
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith("#"))

@@ -615,7 +615,7 @@ private-byte deltas. Per-pack diagnostics and inventory remain external.
 - A gate's receipt messages and its terminal messages are worded differently and
   always have been (`mdash-entity at line 3` in a receipt, `cv.html:3:
   mdash-entity ("&amp;mdash;")` in a terminal). Both lanes are a contract: receipts
-  are hashed and job-apply's `ats-decisions` gate greps the `ats` command's WARN
+  are hashed and the downstream vault's `ats-decisions` gate greps the `ats` command's WARN
   lines verbatim. So a gate exposes both: `run` for the receipt, `command.run` for
   the terminal. Neither recomputes a verdict; both call the same analysis function.
 - `ConsoleReport` is a `Finding` plus the one-line `summary` a terminal prints, and
@@ -671,7 +671,7 @@ private-byte deltas. Per-pack diagnostics and inventory remain external.
 - `npm test`: 494 passed, 1 skipped, 53 files. `npm run lint:self` clean.
   `node dist/cli.js smoke` passes.
 - Cross-repo field test: `npm pack` of this build installed into a scratch copy of
-  the job-apply vault (the live checkout was read from and never written to).
+  the downstream vault (the live checkout was read from and never written to).
   `bash scripts/battery.sh --text --vault ../..` over the practice vault reports
   `TEXT PHASE GREEN (14 gates)`; `python3 tests/test_gates.py` reports 46 tests OK.
   `npx tailored --version` resolves through the npm bin shim, which is what proves
