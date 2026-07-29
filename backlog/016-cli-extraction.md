@@ -1,7 +1,7 @@
 ---
 id: "016"
 title: One canon projection, one atomic write, one threshold source
-status: in-progress
+status: done
 depends_on: ["015"]
 acceptance:
   - One canon-to-text projection exists (canon/corpus.ts) covering the union

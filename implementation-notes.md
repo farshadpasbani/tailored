@@ -728,3 +728,124 @@ private-byte deltas. Per-pack diagnostics and inventory remain external.
   (F2), the `GateInput` breadth that forces the test's cast (F7), `impact` and
   `accessibility` both calling `packResults` (F8), and smoke's inert `0.8` literal
   (card 3).
+
+## Backlog 016: one canon projection, one atomic write, one threshold source
+
+Architecture card 3, stacked on card 1 (backlog 015). Three duplications of
+knowledge removed; no new capability.
+
+### The one canon projection
+
+`src/canon/corpus.ts` replaces `fit.canonToText` and `trace.canonCorpus`. The
+field set is the union of what those two read. The table below is what was
+tabulated before writing any code — a "union" that quietly dropped a field one
+reader depended on was the main risk.
+
+| canon field | fit (canonToText) | trace (canonCorpus) | distinct extras | one projection |
+| --- | --- | --- | --- | --- |
+| identity.name / role | – | yes | yes | yes |
+| identity.location / email / phone | – | yes | yes | yes |
+| identity.links (label + url) | – | – | yes | no (distinct only) |
+| summary | yes | yes | – | yes |
+| skills.label / value | yes | yes | – | yes |
+| projects.name / tagline / bullets | yes | yes | – | yes |
+| projects.links | – | – | yes | no (distinct only) |
+| experience.title / org / bullets | yes | yes | – | yes |
+| experience.start / end | – | yes | yes | yes |
+| experience.location | – | – | yes | no (distinct only) |
+| education.qualification / institution / note | yes | yes | – | yes |
+| education.year / result | – | yes | yes | yes |
+| certifications, publications | yes | yes | – | yes |
+| claims.can | yes | – | yes | yes |
+| facts, numbersThatStand, talkingPoints, positioning, protectedTopics, ipBoundaries, discretion, draftingGuidance, verifiedFacts, projects.year | – | – | – | no |
+
+Two composition facts made this safe to unify, both checked before changing
+anything: `ats.norm` collapses all whitespace before matching, and
+`distinct.normalizeTokens` replaces every non-alphanumeric character with a
+space, so newline-versus-space and part granularity are inert for both readers.
+The numeric tokeniser's patterns are `\s`-based, so they are inert too. What
+matters is only that no two fields are glued into one word.
+
+`distinct` keeps a named extra (`distinctExemptionText`): link strings and an
+entry's location. Stated reason, in the module: exemption is not evidence.
+There a canon phrase only proves "this recurrence is a fact, not a voice tic";
+in the trace corpus a digit inside a URL would pass as proof that a claim is
+grounded. Widening the exemption corpus can only silence a false flag; widening
+the evidence corpus would launder an unproven number.
+
+### Every verdict change, enumerated
+
+Method: a harness ran `legacy-fit`, `trace`, `distinct` (and `fit-blockers` as a
+control that reads no projection) through the registry's command lane over the
+bundled example and a read-only copy of the job-apply vault — 132 real
+`jd.yaml` files, 179 real `cv.html`, 169 real `cover.html`, each distinct run
+against every same-type document as priors — at the merge base and at HEAD.
+832 records, 830 byte-identical, **zero verdict flips**.
+
+1. `legacy-fit`, 2 records (`superseded/2026-07-1x-trunk-tools-sr-ml-engineer`):
+   must-have coverage 33% → 38%, verdict SKIP → SKIP. Causing field:
+   `identity.role`, which reads "AI Engineer · Agentic Systems & Applied ML";
+   the JD's must-have "agentic systems" was previously reported as a gap.
+   Justified: the gate's own gap message asks whether the canon genuinely lacks
+   the term. It does not — the projection was under-reading the canon by
+   ignoring the identity block. Both verdicts unchanged.
+2. `distinctness` pack lane: a signature phrase found verbatim in the canon's
+   identity block is now exempt, as it already was at the terminal. The pack
+   lane used `canonToText` (no identity, no dates) while the command used the
+   wider exemption corpus, so a receipt could flag the candidate's own job title
+   as a voice tic. Proven both ways: the new test in `distinct.test.ts` fails
+   against the merge-base build (message "signature collision … ai engineer
+   agentic systems") and passes at HEAD. Not visible in the harness, which
+   exercises the command lane; the fixture receipt covers the pack lane and its
+   `distinctness` finding is unchanged.
+3. `trace` gained `claims.can` as corpus. No document in the field set changed
+   (0 of 348), and the direction is defensible: a number the canon itself
+   declares as an approved claim is traceable to the canon by definition, and
+   `fit` already treated `claims.can` as canon content.
+
+No flip was left as a note; there was no unjustifiable flip to report.
+
+### One atomic write
+
+`src/fs/atomicWrite.ts` replaces three implementations in `cli.ts`. The
+receipt path's property — it must FAIL when the target exists — survives as
+`exclusive`, implemented the same way (link, not rename), and the temporary is
+now removed in a `finally` so it cannot outlive a throw. Each caller still
+phrases its own failure, so stderr is unchanged. `jd-pdf`'s scratch HTML for
+Chrome is deliberately untouched: it is not a durable artefact, and it belongs
+with the renderer split (card 4).
+
+### One threshold source
+
+`src/policy/thresholds.ts` owns the standards. The eight policy-settable numbers
+keep their schema verbatim (still `.strict()`, still no `.default()`, so every
+existing policy.yaml parses exactly as before, and a file still may not omit a
+key); `gate.ts`'s `GateThresholds` is now that schema's inferred type instead of
+a parallel interface. `impact`'s defaults, every CLI flag default (impact's six,
+`ats`/`requirements-ats` `--min`, `page-fit --max`, `distinct`'s two,
+`legacy-fit`'s two), and smoke's inert `0.8` all read it.
+
+Grep proof: outside `policy/thresholds.ts` and tests, `src/` contains no
+threshold literal. The only remaining matches for `1.28|0.8|0.5|60|45|18` are
+`fit.ts`'s three named algorithm constants and a `padding-left: 18px` in the
+archival JD stylesheet.
+
+Deliberate boundary: the fit verdict scale (`STRONG_SCORE`, `MIXED_SCORE`) and
+`TRANSFERABLE_CREDIT` stay in `fit.ts` as named constants. Those define what a
+score means; a policy threshold decides what a document must reach. Coupling
+`fitMinimumScore` to `STRONG_SCORE` would let a stricter policy silently
+redefine the word STRONG.
+
+### Verification
+
+- CLI oracle: 54 invocations (every command's `--help`, `--version`, an unknown
+  command, and real runs including failure paths, both migrate paths, a second
+  `issue-baseline-receipt` to an existing path, and `smoke`) at merge base and
+  HEAD. All 54 identical; the single textual difference is the path of the
+  base-build's own bundled example directory.
+- Fixture receipt: `verify-pack` over `src/verify/fixtures/legacy-pack` on both
+  builds — same 18 findings, same order, same severities, same verdicts, same
+  messages. The receipt's `engine`, `bindings.outputs` PDF hashes and
+  `receiptSha256` differ, because Chrome stamps a creation date into every PDF
+  and the two builds report different revisions; both staged HTML files are
+  byte-identical.
