@@ -65,3 +65,33 @@ severities, and ordering. `policy/verify.ts`'s ID enums derive from the
 registry, not the other way round. Named gate-sets (e.g. the smoke set) are
 declared here. Decision 2026-07-27: adding a gate = one gate file + one
 registry entry; anything more is a regression.
+
+## Canon corpus
+
+The one canon-to-text projection, `canon/corpus.ts`. Three gates flattened a canon
+their own way until card 3; a fact was evidence to one and invisible to another.
+The corpus is the union of what `fit` and `trace` read, and it is the only
+flattening the gate layer has.
+
+Decision 2026-07-29: `facts` and `numbersThatStand` stay OUT, permanently. They
+carry approved figures, and admitting them would let a keyword sweep declare a
+number grounded because the canon states it somewhere. Proving a figure is
+`claim-integrity`'s job, against an evidence file that binds the claim to a
+source. Rendered link URLs and per-entry locations stay out for the same reason: a
+digit inside a URL is not evidence. The `distinct` gate adds those back for its own
+**exemption** corpus, which is a separate concern — exemption only proves "this
+recurrence is a fact, not a voice tic", so widening it can only silence a false
+flag, where widening the evidence corpus would launder an unproven number.
+
+## Atomic write
+
+`fs/atomicWrite.ts` — the one durable-write primitive: bytes land in a sibling
+temporary, then one filesystem operation publishes them, and the temporary is
+removed whether the write returned or threw. A reader therefore sees the old file
+or the whole new one, never a half-written one.
+
+Decision 2026-07-29: the difference between a write that replaces and one that
+refuses is the `exclusive` option, not a second implementation. Exclusive links
+rather than renames, because rename replaces silently while link fails on an
+existing target — that is what stops a re-issued trust anchor overwriting the
+anchor already on disk.

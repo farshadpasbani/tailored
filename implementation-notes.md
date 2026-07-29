@@ -807,13 +807,29 @@ against every same-type document as priors — at the merge base and at HEAD.
    canon, `claims.can` prose adds five numeric tokens the trace corpus did not
    have (`30`, `10.`, `3.`, `0.2.0`, `24`), some of them list enumerators inside
    sentences rather than metrics. A document claiming one of those figures would
-   now trace where it previously would not. Accepted, for four reasons: no
-   document in the 348 moved; `trace` is terminal-only and enters no receipt (its
-   own summary says it does not prove semantic truth); grounding a figure is
-   `claim-integrity`'s job, against an evidence file, which is why `facts` and
-   `numbersThatStand` stay out of the corpus entirely; and the alternative -
-   dropping `claims.can` - would narrow `fit`, which has read it all along, and
-   would not be the union the acceptance requires.
+   now trace where it previously would not.
+
+   The reason that is containable rather than a trust regression is where the
+   number is allowed to matter. `traceGate` declares `run: null` — it is
+   terminal-only, so no verify-pack receipt has ever recorded a trace verdict and
+   none can; its own summary says it does not prove semantic truth. The pack lane
+   grounds a number through `claim-integrity`, which binds each claim marker to a
+   record in an evidence file. That is also why `facts` and `numbersThatStand`
+   are excluded from the corpus outright: a keyword sweep must not be able to
+   declare a figure grounded because the canon states it somewhere.
+
+   Accepted on those grounds plus two more: no document in the 348 moved, and the
+   alternative — dropping `claims.can` — would narrow `fit`, which has read it all
+   along, and would not be the union the acceptance requires.
+
+   **Recorded for the owner, NOT changed here (review finding F2):**
+   `untracedNumbers` matches on numeric VALUE alone, with no unit and no context,
+   so a `1. 2. 3.` enumerator anywhere in canon prose grounds any document number
+   sharing that value. The reviewer reproduced it (`3`, `24`, `30`). The defect
+   predates this unit — the corpus has always contained prose — and narrowing the
+   match is a scope change for the owner to rule on. Including `claims.can` was
+   mandated by the union criterion, and it widens the set of enumerators slightly;
+   it does not create the mechanism.
 
 No flip was left as a note; there was no unjustifiable flip to report.
 
@@ -867,8 +883,8 @@ redefine the word STRONG.
   auditable in one diff; no requirement wording moved. A private project name in a
   public repository is not a defect to walk past to preserve a path boundary.
 
-- **Net production lines are +128, where the plan targeted negative** (+232 / -104
-  across 12 files, well inside the 400-line ceiling; tests +322 against 350). The
+- **Net production lines are +122, where the plan targeted negative** (+226 / -104
+  across 12 files, well inside the 400-line ceiling; tests +317 against 350). The
   duplication removed was numerically small - a threshold literal is one line in
   each place it appears - while the three new chokepoints carry the reasoning that
   makes them safe to trust in their doc comments. One simplification pass was run
@@ -905,3 +921,52 @@ redefine the word STRONG.
   `TEXT PHASE GREEN (14 gates)`; `python3 tests/test_gates.py` reports 46 tests
   OK. The `ats` warning line that `scripts/ats-decisions.py` greps verbatim is
   unchanged (only that command's `--min` default expression moved).
+
+### Review remediation (dual review, 2026-07-29)
+
+- **Blocker: `cli.ts` still printed a threshold as a literal.** The smoke PASS line
+  said `(max 1)` forty-five lines below the call that reads
+  `THRESHOLDS.maximumPages` properly, so raising the maximum to 2 would have let
+  smoke accept two pages while announcing one — the same class of defect as the
+  inert `0.8` this unit already fixed in that function. Now
+  `(max ${THRESHOLDS.maximumPages})`. The printed text is unchanged today, because
+  the constant is 1; what changed is that it can no longer disagree. No test guards
+  the sentence: after the fix there is no second value to drift, and pinning it
+  would only assert that string interpolation works.
+- **The policy-settable boundary is compiler-enforced.** `POLICY_DEFAULTS` holds the
+  eight the schema accepts, `as const satisfies GateThresholds` so literal types
+  survive for the callers that render them into flag defaults, and `THRESHOLDS`
+  spreads it and adds the command-only extras. The docstring that said "the first
+  eight" — an ordering convention nothing checked — is gone, and the test's
+  hand-copied list of those eight names (a third copy) is now
+  `ThresholdsSchema.safeParse(POLICY_DEFAULTS)`. No value changed.
+- **`distinct`'s exemption adjacency is restored.** Exemption matches a CONTIGUOUS
+  run, so reordering fields changed which cross-field adjacencies exist: the
+  reviewer reproduced four runs whose exemption status moved (three exempt to
+  flagged, one flagged to exempt) even though no document in the 348 changed. The
+  merge base's `title org location start end` line per job is back, with a comment
+  saying why the apparent duplication is load-bearing, and
+  `distinct.test.ts` now pins the adjacency so the next author cannot tidy it away.
+  Checked on both canons: every rendered entry-header run
+  (`senior structural engineer wsp cambridge uk 2022 present` and the example's two)
+  is exemptable at the merge base and at HEAD.
+
+  What no single corpus can restore, stated so it is not mistaken for a miss: any
+  one ordering breaks some cross-FIELD adjacency the merge base's two differently
+  ordered corpora happened to have. For the real canon, 30 four-word runs lose
+  exemptability and 23 gain it — org glued to a bullet's opening word
+  (`engineer wsp production tooling`), institution glued to a note, phone glued to
+  the summary. None of them is reachable: `distinct` scans `<p>`/`<li>` only and
+  never merges a run across an element boundary, so no rendered document contains
+  an entry header running into a bullet. The empirical check agrees — 348 real
+  documents, zero changes, before and after this fix.
+- **`canon/corpus.ts` no longer restates its own body.** The six-line prose field
+  list sat three lines above the twelve-line function that is the field list, with
+  nothing keeping them in step. The exclusion rationale stays: that paragraph is
+  load-bearing and `corpus.test.ts` guards it.
+- `CONTEXT.md` gained entries for the two chokepoints a newcomer could not
+  otherwise find (canon corpus, atomic write), including the permanent exclusion
+  decision so it is not re-litigated.
+- Left alone deliberately, recorded for the owner: F2 (`untracedNumbers` matching on
+  numeric value alone — see above), `verify/pack.ts`'s own tmp-then-rename (a fourth
+  instance, outside criterion 3's three), and `corpus.test.ts`'s source-text greps.
