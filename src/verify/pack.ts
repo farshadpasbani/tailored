@@ -4,14 +4,8 @@ import { z } from "zod";
 import yaml from "js-yaml";
 import { parseCanon } from "../canon/load.js";
 import { parseEvidenceFile, type EvidenceFile } from "../evidence/schema.js";
-import { lintAiTells } from "../gates/aiTell.js";
-import { analyzeRequirementAts } from "../gates/ats.js";
-import { analyzeRequirementFit, canonToText } from "../gates/fit.js";
-import { analyzeImpact, defaultImpactOptions } from "../gates/impact.js";
-import { checkDistinct } from "../gates/distinct.js";
-import { analyzeEditorial } from "../gates/editorial.js";
-import { scanProtected } from "../gates/ipGuard.js";
-import { analyzeProhibitedClaims } from "../gates/prohibitedClaims.js";
+import type { Finding, Gate, GateInput } from "../gates/gate.js";
+import { PACK_GATES } from "../gates/registry.js";
 import { extractPdfText } from "../gates/run.js";
 import { pageCount } from "../gates/pageFit.js";
 import { verifyClaimIntegrity } from "../gates/claimIntegrity.js";
@@ -22,7 +16,7 @@ import { AttestationSchema, snapshotFinalCorpus, WaiverSchema, type Attestation,
 import { VerifyPolicySchema, type VerifyPolicy } from "../policy/verify.js";
 import type { Canon } from "../canon/schema.js";
 import { deriveEngineIdentity } from "./engine.js";
-import { analyzeStrategy, StrategySchema, type Strategy } from "../strategy/schema.js";
+import { StrategySchema, type Strategy } from "../strategy/schema.js";
 
 declare const issuedReceiptBrand: unique symbol;
 export type IssuedVerifyReceipt = VerifyReceipt & { readonly [issuedReceiptBrand]: true };
@@ -180,22 +174,31 @@ function sourceBindings(descriptor: PackDescriptor, descriptorSha256: string, de
   return captureSourceSnapshot(descriptor, descriptorSha256, descriptorDirectory).bindings;
 }
 
-function authoritativeFindings(contexts: CheckContext[], raw: PackFinding[], descriptor: PackDescriptor, trust: ProductionTrust): PackFinding[] {
-  const severity = new Map<string, "blocking" | "advisory">(trust.policy.gates.map(gate => [gate.id, gate.severity]));
-  const priors = trust.corpusDocs;
-  const htmls = contexts.map(context => readFileSync(context.stagedHtml, "utf8"));
-  const grouped = (prefix: string) => raw.filter(finding => finding.id === prefix || finding.id.startsWith(`${prefix}:`));
+/** The waivers and attestations a run may spend, bound to the generation that issued them. */
+interface Resolutions { waivers: Waiver[]; attestations: Attestation[]; packSha256: string; policySha256: string }
+
+/**
+ * Run the gate set and normalise every verdict into a receipt entry: policy severity,
+ * stable message order, and at most one waiver or attestation per advisory failure.
+ *
+ * The findings are the registry's, in registry order, one per gate. That is why the old
+ * runtime assertions ("duplicate finding IDs", "did not emit the complete policy set") are
+ * gone rather than relocated: one entry per registry gate cannot duplicate an ID, and the
+ * policy schema already refuses any policy that does not name exactly the registry's set.
+ */
+export async function assembleFindings(input: GateInput, policy: VerifyPolicy, resolutions: Resolutions, gates: readonly Gate[] = PACK_GATES): Promise<PackFinding[]> {
+  const severity = new Map<string, "blocking" | "advisory">(policy.gates.map(gate => [gate.id, gate.severity]));
   const usedResolutions = new Set<string>();
-  const resolved = (id: string, ok: boolean, messages: string[]): PackFinding => {
+  const resolve = ({ id, ok, messages }: Finding): PackFinding => {
     const gateSeverity = severity.get(id);
     if (!gateSeverity) throw new Error(`policy has no gate ${id}`);
     const stableMessages = [...messages].sort();
     if (ok || gateSeverity === "blocking") return { id, severity: gateSeverity, ok, messages: stableMessages };
-    const candidates = [...trust.waivers, ...trust.attestations].filter(value => value.findingId === id);
+    const candidates = [...resolutions.waivers, ...resolutions.attestations].filter(value => value.findingId === id);
     if (candidates.length > 1) throw new Error(`finding ${id} requires at most one exact resolution; found ${candidates.length}`);
     const findingSha256 = sha256Bytes(canonicalJson({ id, severity: gateSeverity, ok, messages: stableMessages }));
     const resolution = candidates[0];
-    if (resolution && (resolution.packSha256 !== trust.packSha256 || resolution.policySha256 !== trust.policySha256 || resolution.findingSha256 !== findingSha256)) throw new Error(`resolution ${resolution.id} is stale or belongs to another pack, policy, or finding generation`);
+    if (resolution && (resolution.packSha256 !== resolutions.packSha256 || resolution.policySha256 !== resolutions.policySha256 || resolution.findingSha256 !== findingSha256)) throw new Error(`resolution ${resolution.id} is stale or belongs to another pack, policy, or finding generation`);
     if (resolution) usedResolutions.add(resolution.id);
     const waiver = resolution && "reason" in resolution ? resolution : undefined;
     const attestation = resolution && "statement" in resolution ? resolution : undefined;
@@ -203,43 +206,27 @@ function authoritativeFindings(contexts: CheckContext[], raw: PackFinding[], des
     if (attestation) return { id, severity: gateSeverity, ok, messages: stableMessages, disposition: "accepted", resolution: { attestationId: attestation.id } };
     return { id, severity: gateSeverity, ok, messages: stableMessages, disposition: "review-required" };
   };
-  const aggregateRaw = (id: string) => {
-    const values = grouped(id);
-    return resolved(id, values.length > 0 && values.every(value => value.ok), values.flatMap(value => value.messages));
-  };
-  const fit = analyzeRequirementFit(trust.requirements, trust.canon, { allowCandidateAttested: true, minConfidence: trust.policy.thresholds.fitMinimumConfidence, allowedUses: ["fit"], allowedSensitivities: ["public", "private"], allowedProvenanceTypes: ["candidate-attested", "artifact", "external"] });
-  const leaks = htmls.flatMap(html => scanProtected(html, trust.canon.protectedTopics));
-  const prohibited = htmls.flatMap(text => analyzeProhibitedClaims({ text, canon: trust.canon }).issues);
-  const ats = contexts.map(context => analyzeRequirementAts(context.pdfText, trust.requirements, trust.policy.thresholds.atsMinimum));
-  const tells = htmls.flatMap(html => lintAiTells(html));
-  const impacts = htmls.map(html => analyzeImpact(html, { ...defaultImpactOptions, minFontPt: trust.policy.thresholds.minimumFontPt, minMarginMm: trust.policy.thresholds.minimumMarginMm, minLineHeight: trust.policy.thresholds.minimumLineHeight }));
-  const distinct = htmls.map(html => checkDistinct(html, priors, { maxShared: trust.policy.thresholds.maximumSharedRuns, maxSignatures: trust.policy.thresholds.maximumSignaturePhrases, canonText: canonToText(trust.canon) }));
-  const strategy = analyzeStrategy(trust.strategy, { projectIds: trust.canon.projects.map(project => project.name), facts: trust.canon.facts, minConfidence: trust.policy.thresholds.fitMinimumConfidence });
-  const editorial = htmls.map(analyzeEditorial);
-  const evidenceMessages = [...strategy.evidence, ...descriptor.artifacts.filter(artifact => !trust.evidence.claims.some(claim => claim.artifact === artifact.id)).map(artifact => `artifact ${artifact.id} has no claim evidence`)];
-  const findings = [
-    resolved("canon-schema", true, []), resolved("evidence-schema", true, []), resolved("requirements-trust", true, []),
-    resolved("fit-blockers", fit.hardBlockers.length === 0 && fit.score >= trust.policy.thresholds.fitMinimumScore, [...fit.hardBlockers.map(value => `hard blocker: ${value.id}`), ...(fit.score < trust.policy.thresholds.fitMinimumScore ? [`verified fit ${fit.score} is below policy floor ${trust.policy.thresholds.fitMinimumScore}`] : [])]),
-    resolved("protected-topics", leaks.length === 0, leaks.map(value => `protected topic ${value.term}`)),
-    resolved("prohibited-claims", prohibited.length === 0, prohibited.map(value => value.message)),
-    aggregateRaw("claim-integrity"), aggregateRaw("pdf-text-layer"), aggregateRaw("page-integrity"),
-    resolved("corpus-eligibility", true, []),
-    resolved("ats", ats.every(value => value.ok), ats.flatMap(value => value.missing.map(term => `missing literal: ${term}`))),
-    resolved("ai-tell", tells.length === 0, tells.map(value => `${value.rule} at line ${value.line}`)),
-    resolved("impact", impacts.every(value => value.ok), impacts.flatMap((value, index) => value.ok ? [] : [`artifact ${descriptor.artifacts[index].id} failed impact/readability checks`])),
-    resolved("distinctness", distinct.every(value => value.ok), distinct.flatMap((value, index) => [
-      ...value.shared.map(run => `artifact ${descriptor.artifacts[index].id}: shared collision with [${run.sources.join(", ")}]; eligible documents ${priors.length}; text ${JSON.stringify(run.text)}`),
-      ...value.signatures.map(run => `artifact ${descriptor.artifacts[index].id}: signature collision with [${run.sources.join(", ")}]; eligible documents ${priors.length}; text ${JSON.stringify(run.text)}`),
-    ])),
-    resolved("strategy-selection", strategy.selection.length === 0, strategy.selection),
-    resolved("evidence-altitude", false, evidenceMessages),
-    resolved("editorial", false, editorial.flatMap((value, index) => value.messages.map(message => `artifact ${descriptor.artifacts[index].id}: ${message}`))),
-    resolved("accessibility", impacts.every(value => value.readability?.ok ?? false), impacts.filter(value => !(value.readability?.ok ?? false)).map(() => "font, margin, or line-height floor failed")),
-  ];
-  if (new Set(findings.map(finding => finding.id)).size !== findings.length) throw new Error("gate registry emitted duplicate finding IDs");
-  if (findings.length !== trust.policy.gates.length) throw new Error("gate registry did not emit the complete policy set");
-  if (usedResolutions.size !== trust.waivers.length + trust.attestations.length) throw new Error("every waiver/attestation must resolve exactly one current finding");
+  const findings: PackFinding[] = [];
+  for (const gate of gates) {
+    if (!gate.run) throw new Error(`gate ${gate.id} has no receipt lane and cannot enter a pack receipt`);
+    findings.push(resolve(await gate.run(input)));
+  }
+  if (usedResolutions.size !== resolutions.waivers.length + resolutions.attestations.length) throw new Error("every waiver/attestation must resolve exactly one current finding");
   return findings;
+}
+
+/** Everything the registry's gates may read about this pack, drawn from the staged transaction. */
+function gateInput(contexts: CheckContext[], raw: PackFinding[], trust: ProductionTrust): GateInput {
+  return {
+    artifacts: contexts.map(context => ({ id: context.artifact.id, html: readFileSync(context.stagedHtml, "utf8"), pdfText: context.pdfText })),
+    canon: trust.canon,
+    evidence: trust.evidence,
+    requirements: trust.requirements,
+    strategy: trust.strategy,
+    priors: trust.corpusDocs,
+    thresholds: trust.policy.thresholds,
+    upstream: raw.map(finding => ({ id: finding.id, ok: finding.ok, messages: finding.messages })),
+  };
 }
 
 export async function verifyPack(descriptorPath: string, outputDirectory: string, dependencies?: Partial<PackDependencies>): Promise<IssuedVerifyReceipt> {
@@ -275,7 +262,8 @@ export async function verifyPack(descriptorPath: string, outputDirectory: string
       contexts.push(context);
       outputs.push({ ...bind(`${artifact.id}-html`, stagedHtml), file: htmlFile }, { ...bind(`${artifact.id}-pdf`, stagedPdf), file: artifact.pdf });
     }
-    findings.splice(0, findings.length, ...authoritativeFindings(contexts, findings, descriptor, trust));
+    const authoritative = await assembleFindings(gateInput(contexts, findings, trust), trust.policy, trust);
+    findings.splice(0, findings.length, ...authoritative);
     const invalidFinding = findings.map(finding => VerifyReceiptSchema.shape.findings.element.safeParse(finding)).find(result => !result.success);
     if (invalidFinding && !invalidFinding.success) throw new Error(`invalid finding: ${invalidFinding.error.message}`);
     const blocking = findings.filter(finding => finding.severity === "blocking" && !finding.ok);

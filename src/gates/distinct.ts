@@ -6,6 +6,10 @@
 // and <head> are excluded by design, and factual sections that legitimately
 // repeat (education, certifications) can be excluded by name.
 
+import { readFileSync, realpathSync } from "node:fs";
+import { loadCanon } from "../canon/load.js";
+import { canonToText } from "./fit.js";
+import { GateInputError, type Gate } from "./gate.js";
 import { htmlToText } from "./text.js";
 
 const SHINGLE_WORDS = 8;
@@ -144,3 +148,89 @@ export function checkDistinct(newHtml: string, priors: PriorDoc[], opts: Distinc
 
   return { shared, signatures, ok: shared.length <= maxShared && signatures.length <= maxSignatures };
 }
+
+/**
+ * The exemption corpus is every fact the canon states, including the identity and date
+ * fields canonToText (a skills-matching corpus) leaves out.
+ */
+function canonExemptionText(canonPath: string): string {
+  const canon = loadCanon(canonPath);
+  if (!canon.ok) throw new GateInputError(`invalid canon\n  ${canon.errors.join("\n  ")}`);
+  const data = canon.data;
+  return [
+    canonToText(data),
+    data.identity.name, data.identity.role,
+    data.identity.location ?? "", data.identity.email ?? "", data.identity.phone ?? "",
+    ...(data.identity.links ?? []).map(link => `${link.label} ${link.url}`),
+    ...data.experience.flatMap(entry => [`${entry.title} ${entry.org} ${entry.location ?? ""} ${entry.start} ${entry.end}`]),
+    ...data.education.map(entry => `${entry.qualification} ${entry.institution} ${entry.year} ${entry.result ?? ""}`),
+    ...data.projects.flatMap(project => (project.links ?? []).map(link => `${link.label} ${link.url}`)),
+  ].join("\n");
+}
+
+export const distinctnessGate: Gate = {
+  id: "distinctness",
+  severity: "advisory",
+  run: async input => {
+    const canonText = canonToText(input.canon);
+    const results = input.artifacts.map(artifact => checkDistinct(artifact.html, input.priors, {
+      maxShared: input.thresholds.maximumSharedRuns,
+      maxSignatures: input.thresholds.maximumSignaturePhrases,
+      canonText,
+    }));
+    return {
+      id: "distinctness",
+      ok: results.every(result => result.ok),
+      messages: results.flatMap((result, index) => [
+        ...result.shared.map(run => `artifact ${input.artifacts[index].id}: shared collision with [${run.sources.join(", ")}]; eligible documents ${input.priors.length}; text ${JSON.stringify(run.text)}`),
+        ...result.signatures.map(run => `artifact ${input.artifacts[index].id}: signature collision with [${run.sources.join(", ")}]; eligible documents ${input.priors.length}; text ${JSON.stringify(run.text)}`),
+      ]),
+    };
+  },
+  command: {
+    name: "distinct",
+    description: "fail when a document shares an 8+ word run of prose with prior applications (the anti-template gate)",
+    arguments: [
+      { name: "<html>", description: "path to the new authored HTML" },
+      { name: "<priors...>", description: "paths to prior applications' HTML to compare against" },
+    ],
+    options: [
+      { flags: "--max-shared <n>", description: "tolerated number of shared 8+ word runs", default: "0" },
+      { flags: "--max-signatures <n>", description: "tolerated number of signature phrases (4+ words recurring in 2+ priors)", default: "0" },
+      { flags: "--ignore-section <name>", description: "section heading to exclude (repeatable; factual sections legitimately repeat)", collect: true },
+      { flags: "--canon <canon>", description: "canon.yaml; a signature phrase found verbatim in the canon is a fact, not a voice tic, and is exempt" },
+    ],
+    run: async (args, options) => {
+      const html = args[0] as string;
+      const priors = args[1] as string[];
+      const maxShared = Number(options.maxShared);
+      const maxSignatures = Number(options.maxSignatures);
+      if (![maxShared, maxSignatures].every(value => Number.isFinite(value) && value >= 0)) throw new GateInputError("--max-shared and --max-signatures must be non-negative numbers");
+      const canonText = options.canon ? canonExemptionText(options.canon as string) : undefined;
+      let content: string;
+      try { content = readFileSync(html, "utf8"); }
+      catch (error) { throw new GateInputError(`cannot read ${html}: ${(error as Error).message}`); }
+      // A "../*/cover.html"-style glob naturally includes the document under test;
+      // comparing a file against itself would fail every fresh draft, so drop it.
+      const selfPath = realpathSync(html);
+      const priorDocs = priors
+        .filter(path => { try { return realpathSync(path) !== selfPath; } catch { return true; } })
+        .map(path => {
+          try { return { name: path, html: readFileSync(path, "utf8") }; }
+          catch (error) { throw new GateInputError(`cannot read ${path}: ${(error as Error).message}`); }
+        });
+      if (priorDocs.length < priors.length) console.log("  (skipping the document itself from the prior set)");
+      const result = checkDistinct(content, priorDocs, { maxShared, maxSignatures, ignoreSections: options.ignoreSection as string[], canonText });
+      return {
+        id: "distinctness", ok: result.ok,
+        messages: [
+          ...result.shared.map(run => `  shared with ${run.sources.join(", ")}: "${run.text}"`),
+          ...result.signatures.map(run => `  signature phrase (also in ${run.sources.join(", ")}): "${run.text}"`),
+        ],
+        summary: result.ok
+          ? `distinct - ${html} shares ${result.shared.length} run(s), ${result.signatures.length} signature phrase(s) with ${priorDocs.length} prior document(s)`
+          : `distinct: ${result.shared.length} shared run(s) and ${result.signatures.length} signature phrase(s) between ${html} and prior applications (max ${maxShared}/${maxSignatures}); rewrite them for this role, do not raise the ceiling`,
+      };
+    },
+  },
+};

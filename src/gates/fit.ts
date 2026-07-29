@@ -1,6 +1,9 @@
 import type { Canon, FactV2Schema } from "../canon/schema.js";
 import type { Jd } from "../jd/schema.js";
 import { keywordCoverage } from "./ats.js";
+import { loadCanon } from "../canon/load.js";
+import { loadJd } from "../jd/load.js";
+import { GateInputError, loadCommandRequirements, RECEIPT_OPTIONS, REQUIREMENTS_OPTIONS, type Gate } from "./gate.js";
 import { isVerifiedRequirements, type Requirement, type VerifiedRequirements } from "../requirements/schema.js";
 import type { z } from "zod";
 
@@ -101,3 +104,104 @@ export function analyzeRequirementFit(requirements: VerifiedRequirements, canon:
   const verdict: RequirementFitVerdict = hardBlockers.length > 0 ? "BLOCKED" : score >= 0.8 ? "STRONG" : score >= 0.5 ? "MIXED" : "WEAK";
   return { verdict, score, earnedWeight, totalWeight, direct, transferable, materialGaps, waived, hardBlockers, eligibilityUncertainties, reclassified, ineligibleEvidence };
 }
+
+/** The evidence a fit calculation is allowed to spend, given the operator's attestation choice. */
+export function fitEvidencePolicy(allowCandidateAttested: boolean): FitEvidencePolicy {
+  return { allowCandidateAttested, minConfidence: 0.5, allowedUses: ["fit"], allowedSensitivities: ["public", "private"], allowedProvenanceTypes: ["candidate-attested", "artifact", "external"] };
+}
+
+export const fitBlockersGate: Gate = {
+  id: "fit-blockers",
+  severity: "blocking",
+  run: async input => {
+    const fit = analyzeRequirementFit(input.requirements, input.canon, {
+      allowCandidateAttested: true,
+      minConfidence: input.thresholds.fitMinimumConfidence,
+      allowedUses: ["fit"], allowedSensitivities: ["public", "private"],
+      allowedProvenanceTypes: ["candidate-attested", "artifact", "external"],
+    });
+    const floor = input.thresholds.fitMinimumScore;
+    return {
+      id: "fit-blockers",
+      ok: fit.hardBlockers.length === 0 && fit.score >= floor,
+      messages: [
+        ...fit.hardBlockers.map(requirement => `hard blocker: ${requirement.id}`),
+        ...(fit.score < floor ? [`verified fit ${fit.score} is below policy floor ${floor}`] : []),
+      ],
+    };
+  },
+  command: {
+    name: "fit",
+    description: "calculate verified fit only from a frozen requirements-to-canon-evidence map",
+    arguments: [],
+    options: [
+      ...REQUIREMENTS_OPTIONS,
+      { flags: "--allow-candidate-attested", description: "explicitly permit candidate-attested facts to award fit weight" },
+      ...RECEIPT_OPTIONS,
+    ],
+    run: async (_args, options) => {
+      const canon = loadCanon(options.canon as string);
+      if (!canon.ok) throw new GateInputError(`invalid canon\n  ${canon.errors.join("\n  ")}`);
+      const requirements = loadCommandRequirements(options, canon.data);
+      const result = analyzeRequirementFit(requirements, canon.data, fitEvidencePolicy(Boolean(options.allowCandidateAttested)));
+      const label = (kind: string, requirements: { id: string }[]) => requirements.map(requirement => `  ${kind}: ${requirement.id}`);
+      return {
+        id: "fit-blockers",
+        // The verdict, not the blocker list, decides the exit code: MIXED still applies.
+        ok: !(result.verdict === "BLOCKED" || result.verdict === "WEAK"),
+        verdict: result.verdict,
+        messages: [
+          ...label("direct evidence", result.direct),
+          ...label("transferable evidence", result.transferable),
+          ...label("material gap", result.materialGaps),
+          ...result.waived.map(requirement => `  waived evidence gap: ${requirement.id} (${requirement.evidence.kind === "waived" ? requirement.evidence.waiver.id : ""})`),
+          ...label("reclassified by validated prior receipt", result.reclassified),
+          ...label("ineligible canon evidence", result.ineligibleEvidence),
+          ...label("eligibility uncertain", result.eligibilityUncertainties),
+          ...label("HARD BLOCKER", result.hardBlockers),
+        ],
+        summary: `verified requirement-evidence fit ${Math.round(result.score * 100)}% (${result.earnedWeight}/${result.totalWeight} weighted evidence)`,
+      };
+    },
+  },
+};
+
+/**
+ * Terminal-only. Keyword coverage of a canon against a loose jd.yaml: a triage signal for
+ * whether a role is worth drafting, never the verified fit a receipt records.
+ */
+export const legacyFitGate: Gate = {
+  id: "legacy-fit",
+  severity: "advisory",
+  run: null,
+  command: {
+    name: "legacy-fit",
+    description: "legacy compatibility: keyword coverage against canon text (not verified fit)",
+    arguments: [],
+    options: [
+      { flags: "--jd <jd>", description: "path to jd.yaml", required: true },
+      { flags: "--canon <canon>", description: "path to canon.yaml", required: true },
+      { flags: "--apply <ratio>", description: "must-have coverage at/above which the verdict is APPLY", default: "0.8" },
+      { flags: "--floor <ratio>", description: "must-have coverage below which the verdict is SKIP", default: "0.5" },
+    ],
+    run: async (_args, options) => {
+      const apply = Number(options.apply), floor = Number(options.floor);
+      if (!(apply >= 0 && apply <= 1)) throw new GateInputError(`--apply must be a number in [0,1], got ${JSON.stringify(options.apply)}`);
+      if (!(floor >= 0 && floor <= 1)) throw new GateInputError(`--floor must be a number in [0,1], got ${JSON.stringify(options.floor)}`);
+      const thresholdError = validateThresholds(apply, floor);
+      if (thresholdError) throw new GateInputError(thresholdError);
+      const jd = loadJd(options.jd as string);
+      if (!jd.ok) throw new GateInputError(`invalid jd\n  ${jd.errors.join("\n  ")}`);
+      const canon = loadCanon(options.canon as string);
+      if (!canon.ok) throw new GateInputError(`invalid canon\n  ${canon.errors.join("\n  ")}`);
+      const result = analyzeFit(canonToText(canon.data), jd.data, { apply, floor });
+      return {
+        id: "legacy-fit",
+        ok: result.verdict !== "SKIP",
+        verdict: result.verdict,
+        messages: result.must.missing.map(term => `  gap: "${term}" not covered by the canon - does the canon genuinely lack it, or is it phrased differently?`),
+        summary: `must-have coverage ${Math.round(result.must.ratio * 100)}% (${result.must.covered.length}/${jd.data.mustHave.length}); nice-to-have ${Math.round(result.nice.ratio * 100)}%`,
+      };
+    },
+  },
+};

@@ -9,6 +9,9 @@ import { containsWholePhrase, isCandidateClaim } from "../evidence/authority.js"
 import { extractSourceClaimMarkers, parseDeclarativeHtml, type SourceClaimMarker } from "../evidence/html.js";
 import { verifyArtifactResources } from "../evidence/resources.js";
 import { inspectAndPrintDocument, type RenderedClaimMarker, type RenderedDocumentEvidence } from "../render/chrome.js";
+import { loadCanon } from "../canon/load.js";
+import { loadEvidenceFile } from "../evidence/schema.js";
+import { aggregateUpstream, GateInputError, type Gate } from "./gate.js";
 import { extractPdfText } from "./run.js";
 import { tokenizeNumericOccurrences } from "./numeric.js";
 import { htmlToText, lineAt } from "./text.js";
@@ -271,3 +274,39 @@ async function verifyClaimIntegrityInternal(input: VerifyClaimIntegrityInput, ad
     rmSync(temporary, { recursive: true, force: true });
   }
 }
+
+export const claimIntegrityGate: Gate = {
+  id: "claim-integrity",
+  severity: "blocking",
+  // The pack lane verifies claims inside the staging transaction, against the staged PDF that
+  // only exists there; this gate folds those per-artifact findings into the receipt's one entry.
+  run: async input => aggregateUpstream("claim-integrity", input.upstream),
+  command: {
+    name: "claim-integrity",
+    description: "verify claim-marker coverage, exact evidence bindings, namespace separation, and structured metrics; does not prove arbitrary semantic truth",
+    arguments: [{ name: "<html>", description: "path to authored CV or cover HTML" }],
+    options: [
+      { flags: "--artifact <id>", description: "artifact ID recorded in evidence.yaml, such as cv or cover", required: true },
+      { flags: "--canon <canon>", description: "path to strict or migratable canon.yaml", required: true },
+      { flags: "--evidence <evidence>", description: "path to strict evidence.yaml", required: true },
+    ],
+    run: async (args, options) => {
+      const html = args[0] as string;
+      const artifact = options.artifact as string;
+      const canon = loadCanon(options.canon as string);
+      if (!canon.ok) throw new GateInputError(`invalid canon\n  ${canon.errors.join("\n  ")}`);
+      const evidence = loadEvidenceFile(options.evidence as string);
+      if (!evidence.ok) throw new GateInputError(`invalid evidence\n  ${evidence.errors.join("\n  ")}`);
+      let result: ClaimIntegrityResult;
+      try { result = await verifyClaimIntegrity({ htmlPath: html, evidencePath: options.evidence as string, artifact, evidence: evidence.data, canon: canon.data }); }
+      catch (error) { throw new GateInputError(`cannot establish rendered claim integrity for ${html}: ${(error as Error).message}`); }
+      return {
+        id: "claim-integrity", ok: result.ok,
+        messages: result.issues.map(issue => `  ${issue.artifact}:line ${issue.line} [${issue.kind}]${issue.claimId ? ` ${issue.claimId}:` : ""} ${issue.message}`),
+        summary: result.ok
+          ? `claim structural and evidence integrity passed for ${artifact}; this does not prove arbitrary semantic truth or editorial quality`
+          : `claim-integrity: ${result.issues.length} blocking issue(s) in artifact ${JSON.stringify(artifact)}`,
+      };
+    },
+  },
+};

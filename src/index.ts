@@ -40,6 +40,8 @@ export { PackDescriptorSchema, verifyPack, verifyReceiptFreshness, assertVerifie
 export type { PackDescriptor, IssuedVerifyReceipt } from "./verify/pack.js";
 export { VerifyReceiptSchema, FindingSchema } from "./verify/receipt.js";
 export type { VerifyReceipt, PackFinding } from "./verify/receipt.js";
+export { GATES, PACK_GATES, SMOKE_SET, gate, gateCommands } from "./gates/registry.js";
+export type { ConsoleReport, Finding, Gate, GateArtifact, GateCommand, GateInput, GateSeverity, GateThresholds } from "./gates/gate.js";
 export { VerifyPolicySchema, BlockingGateIdSchema, AdvisoryGateIdSchema, REQUIRED_BLOCKING_GATES, REQUIRED_ADVISORY_GATES } from "./policy/verify.js";
 export type { VerifyPolicy } from "./policy/verify.js";
 export { CorpusDescriptorSchema, CorpusMemberSchema, WaiverSchema, AttestationSchema } from "./verify/trust.js";

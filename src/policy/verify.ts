@@ -1,40 +1,53 @@
 import { z } from "zod";
+import type { Gate } from "../gates/gate.js";
+import { PACK_GATES } from "../gates/registry.js";
 
-export const BlockingGateIdSchema = z.enum([
-  "canon-schema", "evidence-schema", "requirements-trust", "fit-blockers",
-  "protected-topics", "prohibited-claims", "claim-integrity", "pdf-text-layer",
-  "page-integrity", "corpus-eligibility",
-]);
-export const AdvisoryGateIdSchema = z.enum([
-  "ats", "ai-tell", "impact", "distinctness", "strategy-selection",
-  "evidence-altitude", "editorial", "accessibility",
-]);
+/**
+ * The gate-ID vocabulary has one owner: the registry. These enums are a projection of it, so
+ * a policy.yaml can only name gates that exist and can only give them the severity the
+ * registry declares.
+ */
+function idsBySeverity(gates: readonly Gate[], severity: "blocking" | "advisory"): [string, ...string[]] {
+  const ids = gates.filter(gate => gate.run !== null && gate.severity === severity).map(gate => gate.id);
+  if (ids.length === 0) throw new Error(`the gate registry declares no ${severity} pack gate`);
+  return ids as [string, ...string[]];
+}
+
+export function verifyPolicySchemaFor(gates: readonly Gate[]) {
+  const blocking = z.enum(idsBySeverity(gates, "blocking"));
+  const advisory = z.enum(idsBySeverity(gates, "advisory"));
+  const required = [...blocking.options, ...advisory.options];
+  const Gate = z.object({ id: z.union([blocking, advisory]), severity: z.enum(["blocking", "advisory"]) }).strict();
+  return z.object({
+    schemaVersion: z.literal(1),
+    gates: z.array(Gate),
+    thresholds: z.object({
+      atsMinimum: z.number().min(0).max(1),
+      fitMinimumConfidence: z.number().min(0).max(1),
+      fitMinimumScore: z.number().min(0).max(1),
+      minimumFontPt: z.number().positive(),
+      minimumMarginMm: z.number().nonnegative(),
+      minimumLineHeight: z.number().positive(),
+      maximumSharedRuns: z.number().int().nonnegative(),
+      maximumSignaturePhrases: z.number().int().nonnegative(),
+    }).strict(),
+  }).strict().superRefine((policy, context) => {
+    const counts = new Map<string, number>();
+    for (const gate of policy.gates) counts.set(gate.id, (counts.get(gate.id) ?? 0) + 1);
+    for (const id of required) {
+      if (counts.get(id) !== 1) context.addIssue({ code: z.ZodIssueCode.custom, path: ["gates"], message: `required gate ${JSON.stringify(id)} must appear exactly once` });
+    }
+    for (const gate of policy.gates) {
+      const expected = (blocking.options as readonly string[]).includes(gate.id) ? "blocking" : "advisory";
+      if (gate.severity !== expected) context.addIssue({ code: z.ZodIssueCode.custom, path: ["gates", policy.gates.indexOf(gate), "severity"], message: `${gate.id} must be ${expected}` });
+    }
+  });
+}
+
+export const BlockingGateIdSchema = z.enum(idsBySeverity(PACK_GATES, "blocking"));
+export const AdvisoryGateIdSchema = z.enum(idsBySeverity(PACK_GATES, "advisory"));
 export const REQUIRED_BLOCKING_GATES = BlockingGateIdSchema.options;
 export const REQUIRED_ADVISORY_GATES = AdvisoryGateIdSchema.options;
 
-const Gate = z.object({ id: z.union([BlockingGateIdSchema, AdvisoryGateIdSchema]), severity: z.enum(["blocking", "advisory"]) }).strict();
-export const VerifyPolicySchema = z.object({
-  schemaVersion: z.literal(1),
-  gates: z.array(Gate),
-  thresholds: z.object({
-    atsMinimum: z.number().min(0).max(1),
-    fitMinimumConfidence: z.number().min(0).max(1),
-    fitMinimumScore: z.number().min(0).max(1),
-    minimumFontPt: z.number().positive(),
-    minimumMarginMm: z.number().nonnegative(),
-    minimumLineHeight: z.number().positive(),
-    maximumSharedRuns: z.number().int().nonnegative(),
-    maximumSignaturePhrases: z.number().int().nonnegative(),
-  }).strict(),
-}).strict().superRefine((policy, context) => {
-  const counts = new Map<string, number>();
-  for (const gate of policy.gates) counts.set(gate.id, (counts.get(gate.id) ?? 0) + 1);
-  for (const id of [...REQUIRED_BLOCKING_GATES, ...REQUIRED_ADVISORY_GATES]) {
-    if (counts.get(id) !== 1) context.addIssue({ code: z.ZodIssueCode.custom, path: ["gates"], message: `required gate ${JSON.stringify(id)} must appear exactly once` });
-  }
-  for (const gate of policy.gates) {
-    const expected = (REQUIRED_BLOCKING_GATES as readonly string[]).includes(gate.id) ? "blocking" : "advisory";
-    if (gate.severity !== expected) context.addIssue({ code: z.ZodIssueCode.custom, path: ["gates", policy.gates.indexOf(gate), "severity"], message: `${gate.id} must be ${expected}` });
-  }
-});
+export const VerifyPolicySchema = verifyPolicySchemaFor(PACK_GATES);
 export type VerifyPolicy = z.infer<typeof VerifyPolicySchema>;
