@@ -3,6 +3,7 @@ import { loadCanon } from "../canon/load.js";
 import { loadJd } from "../jd/load.js";
 import { GateInputError, loadCommandRequirements, ratioOption, RECEIPT_OPTIONS, REQUIREMENTS_OPTIONS, type Gate, type PackGate } from "./gate.js";
 import { extractPdfText } from "./run.js";
+import { THRESHOLDS } from "../policy/thresholds.js";
 import { isVerifiedRequirements, type VerifiedRequirements } from "../requirements/schema.js";
 
 const HEADINGS = ["summary", "profile", "experience", "education", "skills", "projects"];
@@ -84,7 +85,7 @@ export const atsGate: PackGate = {
     arguments: [{ name: "<pdf>", description: "rendered CV PDF" }],
     options: [
       ...REQUIREMENTS_OPTIONS,
-      { flags: "--min <ratio>", description: "minimum literal ATS term coverage", default: "0.8" },
+      { flags: "--min <ratio>", description: "minimum literal ATS term coverage", default: String(THRESHOLDS.atsMinimum) },
       { flags: "--include-ats-aliases", description: "explicitly include reviewed aliases/paraphrases in the ATS score" },
       ...RECEIPT_OPTIONS,
     ],
@@ -134,7 +135,7 @@ export const legacyAtsGate: Gate = {
     arguments: [{ name: "<pdf>", description: "path to the rendered CV PDF" }],
     options: [
       { flags: "--jd <jd>", description: "path to jd.yaml (role keywords)", required: true },
-      { flags: "--min <ratio>", description: "minimum must-have coverage to pass (0..1)", default: "0.8" },
+      { flags: "--min <ratio>", description: "minimum must-have coverage to pass (0..1)", default: String(THRESHOLDS.atsMinimum) },
     ],
     run: async (args, options) => {
       const pdf = args[0] as string;

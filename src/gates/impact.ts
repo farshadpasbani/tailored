@@ -5,6 +5,7 @@
 
 import { readFileSync } from "node:fs";
 import { GateInputError, optionName, type GateInput, type PackGate } from "./gate.js";
+import { THRESHOLDS } from "../policy/thresholds.js";
 import { htmlToText, countWords, lineAt } from "./text.js";
 
 /**
@@ -217,12 +218,12 @@ export interface ImpactOptions {
 }
 
 export const defaultImpactOptions: ImpactOptions = {
-  minFontPt: 9,
-  minMarginMm: 8,
-  minLineHeight: 1.28,
-  summaryMaxWords: 60,
-  bulletMaxWords: 45,
-  skillMaxWords: 18,
+  minFontPt: THRESHOLDS.minimumFontPt,
+  minMarginMm: THRESHOLDS.minimumMarginMm,
+  minLineHeight: THRESHOLDS.minimumLineHeight,
+  summaryMaxWords: THRESHOLDS.summaryMaxWords,
+  bulletMaxWords: THRESHOLDS.bulletMaxWords,
+  skillMaxWords: THRESHOLDS.skillMaxWords,
   checkMinFont: true,
   checkMinMargin: true,
   checkMinLineHeight: true,

@@ -11,6 +11,7 @@ import { canonCorpus } from "../canon/corpus.js";
 import { loadCanon } from "../canon/load.js";
 import type { Canon } from "../canon/schema.js";
 import { GateInputError, type Gate, type PackGate } from "./gate.js";
+import { THRESHOLDS } from "../policy/thresholds.js";
 import { htmlToText } from "./text.js";
 
 const SHINGLE_WORDS = 8;
@@ -205,8 +206,8 @@ export const distinctnessGate: PackGate = {
       { name: "<priors...>", description: "paths to prior applications' HTML to compare against" },
     ],
     options: [
-      { flags: "--max-shared <n>", description: "tolerated number of shared 8+ word runs", default: "0" },
-      { flags: "--max-signatures <n>", description: "tolerated number of signature phrases (4+ words recurring in 2+ priors)", default: "0" },
+      { flags: "--max-shared <n>", description: "tolerated number of shared 8+ word runs", default: String(THRESHOLDS.maximumSharedRuns) },
+      { flags: "--max-signatures <n>", description: "tolerated number of signature phrases (4+ words recurring in 2+ priors)", default: String(THRESHOLDS.maximumSignaturePhrases) },
       { flags: "--ignore-section <name>", description: "section heading to exclude (repeatable; factual sections legitimately repeat)", collect: true },
       { flags: "--canon <canon>", description: "canon.yaml; a signature phrase found verbatim in the canon is a fact, not a voice tic, and is exempt" },
     ],

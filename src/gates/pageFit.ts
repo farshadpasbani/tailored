@@ -1,5 +1,6 @@
 import { GateInputError, type Gate } from "./gate.js";
 import { type Runner, defaultRun } from "./run.js";
+import { THRESHOLDS } from "../policy/thresholds.js";
 export function parsePdfinfoPages(output: string): number {
   const m = output.match(/^Pages:\s+(\d+)/m);
   if (!m) throw new Error("could not parse page count from pdfinfo output");
@@ -21,7 +22,7 @@ export const pageFitGate: Gate = {
     name: "page-fit",
     description: "assert a PDF fits within a maximum page count",
     arguments: [{ name: "<pdf>", description: "path to the PDF" }],
-    options: [{ flags: "--max <n>", description: "maximum allowed pages", default: "1" }],
+    options: [{ flags: "--max <n>", description: "maximum allowed pages", default: String(THRESHOLDS.maximumPages) }],
     run: async (args, options) => {
       const pdf = args[0] as string;
       const max = Number(options.max);

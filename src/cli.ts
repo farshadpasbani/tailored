@@ -14,6 +14,7 @@ import { pageCount } from "./gates/pageFit.js";
 import { GATES, gate, gateCommands, SMOKE_SET } from "./gates/registry.js";
 import { extractPdfText } from "./gates/run.js";
 import { loadJd } from "./jd/load.js";
+import { THRESHOLDS } from "./policy/thresholds.js";
 import { issueBaselineReceipt, prepareRequirementsBaseline, RequirementsSchema, sha256Text, type BaselineReceipt } from "./requirements/schema.js";
 import { migrateLegacyJdToRequirements } from "./requirements/migrate.js";
 import { renderToPdf } from "./render/chrome.js";
@@ -238,7 +239,7 @@ export function smokeCalls(html: string, pdf: string, example: (name: string) =>
     "ai-tell": { args: [[html]], options: {} },
     trace: { args: [html], options: { canon: example("canon.yaml") } },
     impact: { args: [html], options: {} },
-    "page-fit": { args: [pdf], options: { max: "1" } },
+    "page-fit": { args: [pdf], options: { max: String(THRESHOLDS.maximumPages) } },
     "fit-blockers": {
       args: [],
       options: {
@@ -282,7 +283,7 @@ function addSmoke(program: Command): void {
       const pages = await pageCount(pdf);
       const jd = loadJd(example("jd.yaml"));
       if (!jd.ok) fail(`example jd invalid:\n  ${jd.errors.join("\n  ")}`);
-      const ats = analyzeAts(await extractPdfText(pdf), jd.data, 0.8);
+      const ats = analyzeAts(await extractPdfText(pdf), jd.data, THRESHOLDS.atsMinimum);
       console.log(`PASS: smoke rendered ${html} to ${pages} page(s) (max 1), verified fit ${fitVerdict}, legacy ATS coverage ${Math.round(ats.must.ratio * 100)}%, clean of AI tells, every claim traces to the canon, impact clean`);
     });
 }
