@@ -803,6 +803,18 @@ against every same-type document as priors — at the merge base and at HEAD.
    declares as an approved claim is traceable to the canon by definition, and
    `fit` already treated `claims.can` as canon content.
 
+   Stated plainly, because it is the one loosening in this unit: for the real
+   canon, `claims.can` prose adds five numeric tokens the trace corpus did not
+   have (`30`, `10.`, `3.`, `0.2.0`, `24`), some of them list enumerators inside
+   sentences rather than metrics. A document claiming one of those figures would
+   now trace where it previously would not. Accepted, for four reasons: no
+   document in the 348 moved; `trace` is terminal-only and enters no receipt (its
+   own summary says it does not prove semantic truth); grounding a figure is
+   `claim-integrity`'s job, against an evidence file, which is why `facts` and
+   `numbersThatStand` stay out of the corpus entirely; and the alternative -
+   dropping `claims.can` - would narrow `fit`, which has read it all along, and
+   would not be the union the acceptance requires.
+
 No flip was left as a note; there was no unjustifiable flip to report.
 
 ### One atomic write
@@ -836,6 +848,23 @@ score means; a policy threshold decides what a document must reach. Coupling
 `fitMinimumScore` to `STRONG_SCORE` would let a stricter policy silently
 redefine the word STRONG.
 
+### Deviations
+
+- **Three files outside the scope contract's allowed paths**, each mandated by the
+  no-threshold-written-twice criterion and each a two-to-four line edit:
+  `gates/ats.ts` and `gates/pageFit.ts` own the `--min` and `--max` flag defaults,
+  and `gates/gate.ts` held the parallel `GateThresholds` interface. Twelve
+  production files in total against a budget of fourteen.
+- **Net production lines are +128, where the plan targeted negative** (+232 / -104
+  across 12 files, well inside the 400-line ceiling; tests +322 against 350). The
+  duplication removed was numerically small - a threshold literal is one line in
+  each place it appears - while the three new chokepoints carry the reasoning that
+  makes them safe to trust in their doc comments. One simplification pass was run
+  before reporting this: an exported `CANON_CORPUS_FIELDS` array whose only
+  consumer was a test asserting its own contents (the self-referential pin card 1's
+  review called out) is now a doc comment, and the behavioural exclusion test that
+  does the real work stayed.
+
 ### Verification
 
 - CLI oracle: 54 invocations (every command's `--help`, `--version`, an unknown
@@ -849,3 +878,18 @@ redefine the word STRONG.
   `receiptSha256` differ, because Chrome stamps a creation date into every PDF
   and the two builds report different revisions; both staged HTML files are
   byte-identical.
+- Adversarial check on the union: for the real vault canon and the bundled
+  example, every word of the merge-base `canonToText` and of the merge-base
+  `canonCorpus` is present in the new projection (0 dropped, both canons), and
+  every word of the old fit corpus is present in the new distinct exemption
+  text. A "union" that silently dropped a field was the main risk in this unit,
+  so it is checked directly rather than inferred from verdicts matching.
+- `npm test`: 514 passed, 1 skipped, 54 files. `npm run lint:self` clean.
+  `node dist/cli.js smoke` passes (inside the oracle). `production.test.ts`
+  untouched.
+- Cross-repo field test: `npm pack` installed into a scratch copy of the
+  job-apply vault (the live checkout was read from, never written to).
+  `bash scripts/battery.sh --text --vault tests/practice-vault` reports
+  `TEXT PHASE GREEN (14 gates)`; `python3 tests/test_gates.py` reports 46 tests
+  OK. The `ats` warning line that `scripts/ats-decisions.py` greps verbatim is
+  unchanged (only that command's `--min` default expression moved).

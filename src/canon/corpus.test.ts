@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { canonCorpus, CANON_CORPUS_FIELDS } from "./corpus.js";
+import { canonCorpus } from "./corpus.js";
 import type { Canon } from "./schema.js";
 
 const minimalCanon: Canon = {
@@ -90,11 +90,6 @@ describe("canonCorpus", () => {
     expect(text).not.toMatch(/undefined|null|\[object/);
   });
 
-  it("declares its field set, so a reader can see what a claim may trace to", () => {
-    expect(CANON_CORPUS_FIELDS).toContain("identity.name");
-    expect(CANON_CORPUS_FIELDS).toContain("claims.can");
-    expect(CANON_CORPUS_FIELDS).not.toContain("facts");
-  });
 });
 
 describe("one projection", () => {

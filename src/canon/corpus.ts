@@ -6,9 +6,16 @@
 import type { Canon } from "./schema.js";
 
 /**
- * Exactly the canon fields the projection carries, as dotted paths. It is documentation with
- * a test behind it: widening the corpus widens what a numeric claim may trace to, so the set
- * is declared here rather than left to be reverse-engineered from the code below.
+ * Every fact-bearing text field of a canon: what a keyword matcher searches, what a numeric
+ * claim traces to, and what an anti-template exemption is measured against. Exactly these
+ * fields, and no others:
+ *
+ *   identity.name, identity.role, identity.location, identity.email, identity.phone,
+ *   summary, skills.label, skills.value, projects.name, projects.tagline,
+ *   projects.bullets, experience.title, experience.org, experience.start,
+ *   experience.end, experience.bullets, education.qualification,
+ *   education.institution, education.year, education.result, education.note,
+ *   certifications, publications, claims.can
  *
  * Deliberately absent: `facts`, `numbersThatStand`, `talkingPoints`, `positioning`,
  * `protectedTopics`, `ipBoundaries`, `discretion`, `draftingGuidance`, `verifiedFacts`, and
@@ -19,23 +26,10 @@ import type { Canon } from "./schema.js";
  * Rendered link URLs and per-entry locations are absent for the same reason - a digit inside
  * a URL is not evidence for a claim. The distinct gate adds those two back for its own
  * exemption corpus (see gates/distinct.ts) where nothing is being proved true.
- */
-export const CANON_CORPUS_FIELDS: readonly string[] = [
-  "identity.name", "identity.role", "identity.location", "identity.email", "identity.phone",
-  "summary",
-  "skills.label", "skills.value",
-  "projects.name", "projects.tagline", "projects.bullets",
-  "experience.title", "experience.org", "experience.start", "experience.end", "experience.bullets",
-  "education.qualification", "education.institution", "education.year", "education.result", "education.note",
-  "certifications", "publications",
-  "claims.can",
-];
-
-/**
- * Every fact-bearing text field of a canon, one entry per line: what a keyword matcher
- * searches, what a numeric claim traces to, and what an anti-template exemption is measured
- * against. Callers normalise whitespace before matching, so the line breaks are for reading,
- * not tokenisation - what matters is that no two fields are glued into one word.
+ *
+ * One field per line: the line breaks are for reading, not tokenisation - every caller
+ * normalises whitespace before matching, so all that matters is that no two fields are
+ * glued into one word.
  */
 export function canonCorpus(canon: Canon): string {
   const parts: string[] = [
