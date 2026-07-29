@@ -580,3 +580,151 @@ private-byte deltas. Per-pack diagnostics and inventory remain external.
   published example is a separate, larger change outside this unit's paths, so the
   field pack binds the example's real trust inputs and supplies the missing files
   beside them.
+
+## Backlog 015: one Gate interface and one registry
+
+### Shape
+
+- `src/gates/gate.ts` holds the contract: `Finding = { id, ok, messages[] }`,
+  `Gate = { id, severity, run, command }`, the `GateInput` the pack lane shows a
+  gate, and the small helpers gate commands share (option naming, the requirements
+  flag block, the receipt resolver).
+- `src/gates/registry.ts` holds the set. Its first block is the pack lane in
+  receipt order; its second is the terminal-only legacy checks (`page-fit`,
+  `ip-guard`, `legacy-ats`, `legacy-fit`, `trace`) that no receipt has ever
+  recorded. `PACK_GATES` is the first block, and it is what `policy/verify.ts` and
+  `verify/pack.ts` consume, so no gate is added to or dropped from the pack lane.
+- `verifyPolicySchemaFor(gates)` builds the policy schema from a gate list;
+  `VerifyPolicySchema` is that function applied to `PACK_GATES`. Every ID string
+  and severity is unchanged, so existing policy.yaml files and receipts parse as
+  before.
+- `assembleFindings(input, policy, resolutions, gates)` in `verify/pack.ts` runs
+  the registry and normalises each verdict. The two runtime assertions are gone
+  because they are now structurally impossible: one finding per registry gate
+  cannot duplicate an ID, and the policy schema already refuses a policy that does
+  not name exactly the registry's set.
+- `cli.ts` declares the nine commands that are not gates and registers every gate
+  command from the registry, in a pinned order so the published help is unchanged.
+  A newly registered gate appends to the end of the help without a cli.ts edit.
+  One `report()` prints every gate command's output and exits from `Finding.ok`.
+- `cli.ts` now exports `buildProgram(gates)` and only parses argv when it is the
+  process entry point, so a test can inspect dispatch without running the CLI.
+
+### Two lanes, one verdict
+
+- A gate's receipt messages and its terminal messages are worded differently and
+  always have been (`mdash-entity at line 3` in a receipt, `cv.html:3:
+  mdash-entity ("&amp;mdash;")` in a terminal). Both lanes are a contract: receipts
+  are hashed and the downstream vault's `ats-decisions` gate greps the `ats` command's WARN
+  lines verbatim. So a gate exposes both: `run` for the receipt, `command.run` for
+  the terminal. Neither recomputes a verdict; both call the same analysis function.
+- `ConsoleReport` is a `Finding` plus the one-line `summary` a terminal prints, and
+  an optional `verdict` word for `fit` and `legacy-fit`, which print `STRONG:` or
+  `APPLY:` rather than `PASS:`.
+
+### The one behaviour change
+
+- `impact` printed its three readability messages unconditionally while its verdict
+  respected the `--skip-*` flags. A document failing only the font floor, run with
+  `--skip-min-font`, printed the violation, said it was clean, and exited 0; the
+  same flag also inflated the reported violation count. The message list, the
+  count, the verdict and the exit code now all derive from the same enabled-check
+  set. Three oracle cases move, all the same fix:
+  - `impact tinyfont.html --skip-min-font`: the silenced font line is no longer
+    printed. Exit stays 0.
+  - `impact bad.html --skip-min-font`: `4 violation(s)` becomes `3 violation(s)`.
+    Exit stays 1.
+  - the same with more flags: `3 violation(s)` becomes `2 violation(s)`. Exit
+    stays 1.
+- `src/gates/impact.cli.test.ts` pins both directions. Both new cases fail against
+  a merge-base build and pass here.
+
+### Incidental differences (evidenced, outside the oracle)
+
+- `lint` used to print a file's tells as it went, so an unreadable file part-way
+  through a batch still showed the earlier files' lines. That is preserved:
+  `GateInputError` carries the messages produced before the command gave up, and
+  the CLI prints them before `FAIL:`. Same for the `ats` orphan-synonym warnings
+  and `ip-guard`'s leak lines.
+- `smoke` renders the example PDF before running the gate set rather than after the
+  text gates. With a passing example the output is identical; with a failing one it
+  now spends a Chrome render first.
+- `smoke`'s failure wording is generic (`example fails <gate>: ...`) instead of one
+  bespoke sentence per check. The success line is byte-identical.
+
+### Deferred, deliberately
+
+- Thresholds still live in two places: the policy schema declares the eight numbers
+  and `GateThresholds` names the same eight. Card 3 owns `policy/thresholds.ts`.
+- `smoke` re-derives the page count and the legacy ATS ratio its summary line
+  quotes, because a `Finding` carries a verdict and not those figures. A report
+  shape rich enough to carry them belongs with card 5.
+
+### Verification
+
+- Per-command oracle: 88 invocations (every command, its `--help`, and its failure
+  paths) over `examples/alex-rivers` and `src/verify/fixtures/legacy-pack`, run
+  against a merge-base build and this one. Four files differ: the three enumerated
+  `impact` cases, and `verify-pack`'s receipt digest, which differs between two
+  consecutive runs of the merge-base build as well, because Chrome stamps a
+  creation date into the PDF. The receipt's findings are byte-identical.
+- `npm test`: 494 passed, 1 skipped, 53 files. `npm run lint:self` clean.
+  `node dist/cli.js smoke` passes.
+- Cross-repo field test: `npm pack` of this build installed into a scratch copy of
+  the downstream vault (the live checkout was read from and never written to).
+  `bash scripts/battery.sh --text --vault ../..` over the practice vault reports
+  `TEXT PHASE GREEN (14 gates)`; `python3 tests/test_gates.py` reports 46 tests OK.
+  `npx tailored --version` resolves through the npm bin shim, which is what proves
+  the new entry-point guard does not break the installed CLI.
+
+### Deviation: diff budget
+
+- The unit's budget was 550 new production lines with a net target of +100. The
+  result is roughly 1400 added and 700 deleted across 17 production files. The
+  budget assumed the CLI's per-command wording would be absorbed by the shared
+  formatter; it cannot be, because each command's detail lines and verdict sentence
+  are a preserved contract, so about 470 of those lines are relocated from cli.ts
+  rather than new. cli.ts itself sheds 296 lines net. The genuinely new code is
+  `gate.ts` and `registry.ts` (about 300 lines) plus one `run` per pack gate.
+  Speculative surface was stripped before reporting this: an unused
+  `DEFAULT_THRESHOLDS`, two duplicated analysis blocks, and three index exports.
+
+### Review remediation (dual review, 2026-07-29)
+
+- **Pack-lane membership is declared, not inferred.** `PACK_GATES` was
+  `GATES.filter(entry => entry.run !== null)`, so giving a terminal-only gate a
+  receipt lane silently promoted it to a required policy gate and every existing
+  policy.yaml started failing. `PACK_GATES` is now a written-out list of the
+  eighteen and `GATES` is `[...PACK_GATES, ...TERMINAL_ONLY_GATES]`. Two probes:
+  giving `legacy-fit` a `run()` leaves `PACK_GATES` at eighteen and the fixture
+  policy parsing; adding it to the declared list fails four independent
+  assertions.
+- A new `PackGate` type (a `Gate` whose `run` is required) is what `PACK_GATES`,
+  `verifyPolicySchemaFor`, and `assembleFindings` accept. That deletes the
+  `run !== null` filter in `policy/verify.ts` and the unreachable guard in
+  `assembleFindings`, and each pack gate now declares its lane at its definition.
+- `strategy-selection` and `evidence-altitude` moved out of the registry into
+  `src/gates/strategy.ts`. The registry's own rule (it delegates, it never
+  implements) is now true of every entry, and a grep of `src/gates/` finds them.
+- Test pins that do not derive from the thing they check: `registry.test.ts` holds
+  a hand-written list of the eighteen IDs in receipt order and a hand-written
+  severity map, and asserts the policy schema's required set against the same
+  literals. The old assertion compared `PACK_GATES` against a projection of
+  itself, and incidentally pinned an all-blocking-then-all-advisory ordering that
+  a legal new advisory gate would have broken.
+- `COMMAND_ORDER` is now pinned twice: its set equals the builtins plus every
+  registry command, and `buildProgram()` registers exactly it, in order. A renamed
+  gate command used to slide silently to the end of the published help.
+- `smokeCalls` is hoisted out of the smoke action and exported, so a test asserts
+  every `SMOKE_SET` ID has an invocation. The action also fails cleanly on a
+  missing one instead of throwing on `undefined.args`.
+- Public API narrowed on the owner's ruling: `index.ts` exports `Gate`, `Finding`,
+  `GateInput`, and `GateSeverity` only. `GateCommand`, `ConsoleReport`,
+  `GateArtifact`, `GateThresholds`, and `PackGate` stay internal, because a
+  published package cannot un-export a type without a breaking change and the
+  CLI-declaration layer is not a shape a consumer should pin. `index.test.ts`
+  checks the built `dist/index.d.ts`, not the source.
+- Deferred by ruling, not fixed here: decorative severities on terminal-only gates
+  (F2), the `GateInput` breadth that forces the test's cast (F7), `impact` and
+  `accessibility` both calling `packResults` (F8), and smoke's inert `0.8` literal
+  (card 3).

@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { loadCanon } from "../canon/load.js";
+import { GateInputError, type Gate } from "./gate.js";
 import { htmlToText } from "./text.js";
 import type { Canon } from "../canon/schema.js";
 import { tokenizeNumericOccurrences } from "./numeric.js";
@@ -143,3 +146,49 @@ export function analyzeTrace(html: string, canon: Canon, jdText: string): TraceR
     structuralIssues,
   };
 }
+
+/**
+ * Terminal-only. The pack lane grounds claims through `claim-integrity`, which binds each
+ * marker to an evidence record; trace is the older defence-in-depth sweep over documents
+ * that carry no evidence file.
+ */
+export const traceGate: Gate = {
+  id: "trace",
+  severity: "blocking",
+  run: null,
+  command: {
+    name: "trace",
+    description: "legacy defence-in-depth check for disconnected numeric values, names, and dates; does not prove semantic truth",
+    arguments: [{ name: "<html>", description: "path to the rendered HTML document (cv.html or cover.html)" }],
+    options: [
+      { flags: "--canon <canon>", description: "path to canon.yaml", required: true },
+      { flags: "--jd-text <path>", description: "path to the archived job description text, for claims that describe the employer" },
+    ],
+    run: async (args, options) => {
+      const html = args[0] as string;
+      const canon = loadCanon(options.canon as string);
+      if (!canon.ok) throw new GateInputError(`invalid canon\n  ${canon.errors.join("\n  ")}`);
+      let content: string;
+      try { content = readFileSync(html, "utf8"); }
+      catch (error) { throw new GateInputError(`cannot read ${html}: ${(error as Error).message}`); }
+      const jdTextPath = options.jdText as string | undefined;
+      let jdText = "";
+      if (jdTextPath) {
+        try { jdText = readFileSync(jdTextPath, "utf8"); }
+        catch (error) { throw new GateInputError(`cannot read ${jdTextPath}: ${(error as Error).message}`); }
+      }
+      const result = analyzeTrace(content, canon.data, jdText);
+      return {
+        id: "trace", ok: result.ok,
+        messages: [
+          ...result.untracedNumbers.map(claim => `  untraced claim: "${claim.raw}" (no matching value in the canon${jdTextPath ? " or --jd-text" : ""})`),
+          ...result.nameIssues.map(issue => issue.kind === "unknown-name" ? `  unknown name: "${issue.detail}" (not in the canon)` : `  date mismatch: ${issue.detail} (does not match the canon)`),
+          ...result.structuralIssues.map(issue => `  structural: ${issue}`),
+        ],
+        summary: result.ok
+          ? `trace - disconnected numeric/name/date checks passed for ${html}; this legacy check does not prove semantic truth`
+          : `trace: ${result.untracedNumbers.length} untraced claim(s), ${result.nameIssues.length} name/date issue(s), ${result.structuralIssues.length} structural issue(s) in ${html}`,
+      };
+    },
+  },
+};

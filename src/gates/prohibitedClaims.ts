@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ProhibitionConcept } from "../canon/prohibitions.js";
 import type { RenderedDocumentEvidence, RenderedOwnerMarker, RenderedSourceMarker } from "../render/chrome.js";
+import type { PackGate } from "./gate.js";
 import { htmlToText } from "./text.js";
 import { normalizePhone, tokenizeNumericOccurrences } from "./numeric.js";
 
@@ -639,3 +640,13 @@ export function analyzeProhibitedClaims(input: ProhibitedClaimsInput): Prohibite
   }
   return { ok: issues.length === 0, issues };
 }
+
+export const prohibitedClaimsGate: PackGate = {
+  id: "prohibited-claims",
+  severity: "blocking",
+  run: async input => {
+    const issues = input.artifacts.flatMap(artifact => analyzeProhibitedClaims({ text: artifact.html, canon: input.canon }).issues);
+    return { id: "prohibited-claims", ok: issues.length === 0, messages: issues.map(issue => issue.message) };
+  },
+  command: null,
+};
