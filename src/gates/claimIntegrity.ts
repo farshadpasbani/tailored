@@ -8,7 +8,7 @@ import type { ClaimEvidence, EvidenceFile } from "../evidence/schema.js";
 import { containsWholePhrase, isCandidateClaim } from "../evidence/authority.js";
 import { extractSourceClaimMarkers, parseDeclarativeHtml, type SourceClaimMarker } from "../evidence/html.js";
 import { verifyArtifactResources } from "../evidence/resources.js";
-import { inspectAndPrintDocument, type RenderedClaimMarker, type RenderedDocumentEvidence } from "../render/chrome.js";
+import { inspectAndPrint, type ClaimMarker, type DocumentEvidence } from "../render/inspector.js";
 import { loadCanon } from "../canon/load.js";
 import { loadEvidenceFile } from "../evidence/schema.js";
 import { aggregateUpstream, GateInputError, type PackGate } from "./gate.js";
@@ -38,7 +38,7 @@ export interface ClaimIntegrityInput {
   artifact: string;
   evidence: EvidenceFile;
   canon: Canon;
-  renderedDocument?: RenderedDocumentEvidence;
+  renderedDocument?: DocumentEvidence;
   /** Exact archived bytes keyed by employer source ID. The public verifier fills this from archivePath. */
   archivedSources?: Record<string, string>;
   /** Resolved input path, supplied by the public verifier to enforce artifact.path. */
@@ -177,7 +177,7 @@ export function analyzeClaimIntegrity(input: ClaimIntegrityInput): ClaimIntegrit
     issue(issues, input, "rendered-evidence-incomplete", 0, "final Chrome evidence requires claims, textUnits, generatedContent, and actual PDF printText");
     return { ok: false, issues };
   }
-  const renderedById = new Map<string, RenderedClaimMarker[]>();
+  const renderedById = new Map<string, ClaimMarker[]>();
   for (const rendered of input.renderedDocument.claims) renderedById.set(rendered.id, [...(renderedById.get(rendered.id) ?? []), rendered]);
   for (const marker of markers) {
     const id = marker.id, rendered = renderedById.get(id) ?? [], record = records.get(id);
@@ -200,13 +200,13 @@ export function analyzeClaimIntegrity(input: ClaimIntegrityInput): ClaimIntegrit
   for (const unit of input.renderedDocument.textUnits) {
     if (!unit.visible) continue;
     const owners = unit.claimIds.length + unit.structuralReasons.length;
-    if (owners === 0) issue(issues, input, "unannotated-content", 0, `visible rendered residue at ${unit.path}: ${JSON.stringify(unit.text)}`);
-    if (owners > 1 || unit.claimIds.some(id => !id) || unit.structuralReasons.some(reason => !reason.trim())) issue(issues, input, "ambiguous-text-ownership", 0, `rendered text at ${unit.path} must have exactly one claim or reasoned nonfactual owner`);
+    if (owners === 0) issue(issues, input, "unannotated-content", 0, `visible rendered residue at ${unit.locator}: ${JSON.stringify(unit.text)}`);
+    if (owners > 1 || unit.claimIds.some(id => !id) || unit.structuralReasons.some(reason => !reason.trim())) issue(issues, input, "ambiguous-text-ownership", 0, `rendered text at ${unit.locator} must have exactly one claim or reasoned nonfactual owner`);
     for (const reason of unit.structuralReasons) if (!allowedStructuralReasons.has(reason) || unit.tag !== "span" || !structuralText.test(unit.text.trim()) || tokenizeNumericOccurrences(unit.text).some(entry => entry.kind === "number")) {
-      issue(issues, input, "invalid-structural-content", 0, `rendered text at ${unit.path} is not an allowed decorative separator`);
+      issue(issues, input, "invalid-structural-content", 0, `rendered text at ${unit.locator} is not an allowed decorative separator`);
     }
   }
-  for (const generated of input.renderedDocument.generatedContent) if (generated.visible && generated.text.trim()) issue(issues, input, "generated-content", 0, `visible CSS-generated content at ${generated.path}${generated.pseudo} must be authored and claim-owned`);
+  for (const generated of input.renderedDocument.generatedContent) if (generated.visible && generated.text.trim()) issue(issues, input, "generated-content", 0, `visible CSS-generated content at ${generated.locator} must be authored and claim-owned`);
   let unownedPrint = normalizedPrint(input.renderedDocument.printText);
   for (const record of records.values()) {
     const expected = normalizedPrint(record.text);
@@ -223,14 +223,14 @@ export function analyzeClaimIntegrity(input: ClaimIntegrityInput): ClaimIntegrit
 export async function verifyClaimIntegrity(input: VerifyClaimIntegrityInput): Promise<ClaimIntegrityResult> {
   return verifyClaimIntegrityInternal(input, {
     writeSnapshot: (path, value, encoding) => writeFileSync(path, value, encoding),
-    inspectAndPrint: inspectAndPrintDocument,
+    inspectAndPrint,
     extractPrintText: extractPdfText,
   });
 }
 
 interface VerificationAdapters {
   writeSnapshot(path: string, value: string | Buffer, encoding?: "utf8"): void;
-  inspectAndPrint: typeof inspectAndPrintDocument;
+  inspectAndPrint: typeof inspectAndPrint;
   extractPrintText: typeof extractPdfText;
 }
 

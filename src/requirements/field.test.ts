@@ -9,7 +9,7 @@ import type { Canon } from "../canon/schema.js";
 import { analyzeRequirementAts } from "../gates/ats.js";
 import { analyzeRequirementFit } from "../gates/fit.js";
 import { extractPdfText } from "../gates/run.js";
-import { renderToPdf } from "../render/chrome.js";
+import { render } from "../render/renderer.js";
 import { issueBaselineReceipt, loadRequirements, prepareRequirementsBaseline, type Requirement, type Requirements } from "./schema.js";
 
 function freezeBaseline(requirements: Requirement[], input: { frozenAt: string; archivedJdSha256: string; issuer: string }) { const prepared = prepareRequirementsBaseline(requirements); const receipt = issueBaselineReceipt(prepared.sha256, input); return { ...prepared, receiptSha256: receipt.sha256 }; }
@@ -205,7 +205,7 @@ describe.skipIf(fixtures.length === 0)("real private-vault field fixtures", () =
         expect(reloaded.data.requirements.every((item) => jdText.slice(item.source.span.start, item.source.span.end) === item.source.quote)).toBe(true);
         if (expected.multilineQuote) expect(reloaded.data.requirements.some((item) => item.source.quote.includes("\n"))).toBe(true);
         const fit = analyzeRequirementFit(reloaded.data, reviewedCanon, policy);
-        await renderToPdf(join(application, "cv.html"), pdf);
+        await render(join(application, "cv.html"), pdf);
         const ats = analyzeRequirementAts(await extractPdfText(pdf), reloaded.data, 0.8);
         expect(ats.min).toBe(0.8);
         expect(Number(fit.score.toFixed(3))).toBe(expected.fit);

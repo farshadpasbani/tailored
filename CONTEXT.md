@@ -42,14 +42,28 @@ inspect, pdfText, pageCount; fs/hashing/staging always real).
 
 ## Renderer / Inspector
 
-Two modules currently glued into `render/chrome.ts`. The **renderer** is
-`render(html) → pdf` — Chrome discovery, args, spawn are implementation. The
-**inspector** is `inspect(html) → DocumentEvidence` over CDP (single
-transport; the DOM-dump path is retired). Decision 2026-07-27: DocumentEvidence
-speaks the domain (text units, claim markers, source markers, generated
-content); CSS selectors and pseudo-element names are opaque debug locators,
-not contract. The injected inspection source is generated from typed,
-Node-unit-tested algorithm functions plus a thin DOM-walk shell.
+Two public modules under `render/`, split out of `render/chrome.ts` in card 4.
+The **renderer** is `render(html, pdf)` — Chrome discovery, args, spawn are
+implementation. The **inspector** is `inspect(html) → DocumentEvidence` over CDP
+(single transport; the DOM-dump path is retired), plus
+`inspectAndPrint(html, pdf)` for the one case that must print the exact revision
+it inspected.
+
+Decision 2026-07-27: DocumentEvidence speaks the domain (text units, claim
+markers, source markers, generated content); CSS selectors and pseudo-element
+names are opaque debug locators, not contract. The injected inspection source is
+generated from typed, Node-unit-tested algorithm functions plus a thin DOM-walk
+shell.
+
+`render/inspection/**` is the inspector's implementation and package-internal —
+nothing outside `render/` imports it. `algorithms.ts` is the pure maths (sRGB
+contrast, the clipping fold, painted geometry), `source.ts` owns the scripts
+Chrome runs inside the page, `cdp.ts` owns the transport.
+
+`render/chrome.ts` survives as the machine probe both public modules share:
+where the binary is, and the flags every headless invocation uses. It is
+deliberately not a compatibility shim — a renderer and an inspector both need to
+know those two things, and neither owns them.
 
 ## Thresholds
 

@@ -28,8 +28,10 @@ export type {
   NumericExemption,
   NumericExemptionClassification,
 } from "./gates/prohibitedClaims.js";
-export { inspectRenderedDocument, inspectAndPrintDocument } from "./render/chrome.js";
-export type { RenderedClaimMarker, RenderedDocumentEvidence, RenderedOwnerMarker, RenderedSourceMarker, RenderedTextUnit } from "./render/chrome.js";
+export { inspect, inspectAndPrint } from "./render/inspector.js";
+export type { ClaimMarker, DebugLocator, DocumentEvidence, GeneratedContent, OwnerMarker, SourceMarker, TextUnit } from "./render/inspector.js";
+export { render } from "./render/renderer.js";
+export type { RenderOptions } from "./render/renderer.js";
 export { RequirementsSchema, RequirementSchema, RequirementWaiverSchema, ChangeReceiptSchema, BaselineReceiptSchema, loadRequirements, parseRequirements, sha256Text, digestCanonical, prepareRequirementsBaseline, issueBaselineReceipt, createChangeReceipt } from "./requirements/schema.js";
 export type { Requirements, VerifiedRequirements, Requirement, RequirementWaiver, RequirementsParseResult, BaselineReceipt, ChangeReceipt, ReceiptResolver, BaselineReceiptResolver } from "./requirements/schema.js";
 export { migrateLegacyJdToRequirements } from "./requirements/migrate.js";
