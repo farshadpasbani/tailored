@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import yaml from "js-yaml";
 import { loadCanon } from "../canon/load.js";
-import { inspectRenderedDocument, type RenderedDocumentEvidence } from "../render/chrome.js";
+import { inspect, type DocumentEvidence } from "../render/inspector.js";
 import { GateInputError, type Gate, type PackGate } from "./gate.js";
 import { analyzeProhibitedClaims, hasVisibleNumericOccurrences, MetricClaimsFileSchema, type MetricClaim, type NumericExemption } from "./prohibitedClaims.js";
 import { lineAt } from "./text.js";
@@ -70,9 +70,9 @@ export const ipGuardGate: Gate = {
       }
       const leaks = scanProtected(content, canon.data.protectedTopics);
       const messages = leaks.map(leak => `${file}:${leak.line}: leaked protected topic "${leak.term}"`);
-      let renderedDocument: RenderedDocumentEvidence | undefined;
+      let renderedDocument: DocumentEvidence | undefined;
       if (numericExemptions?.some(exemption => exemption.sourcePaths !== undefined)) {
-        try { renderedDocument = await inspectRenderedDocument(file); }
+        try { renderedDocument = await inspect(file); }
         catch (error) { throw new GateInputError(`could not verify rendered canon markers: ${(error as Error).message}`, messages); }
       }
       const prohibited = analyzeProhibitedClaims({ text: content, canon: canon.data, metricClaims, numericExemptions, renderedDocument });

@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { EvidenceFile } from "./schema.js";
 import { buildResourceManifest, computeResourceManifestHash, verifyArtifactResources } from "./resources.js";
-import { findChrome, inspectRenderedDocument } from "../render/chrome.js";
+import { findChrome } from "../render/chrome.js";
+import { inspect } from "../render/inspector.js";
 
 const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 const roots: string[] = [];
@@ -155,7 +156,7 @@ describe.skipIf(!findChrome())("browser CSS resource grammar parity", () => {
       "tile.svg": '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1" fill="red"/></svg>',
       "other.svg": '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1" fill="blue"/></svg>',
     });
-    const rendered = await inspectRenderedDocument(item.htmlPath);
+    const rendered = await inspect(item.htmlPath);
     expect(rendered.claims.find(claim => claim.id === "proof")?.text).toBe("first second");
     expect(rendered.text).toContain("tile.svg");
     expect(rendered.text).toContain("other.svg");
@@ -166,7 +167,7 @@ describe.skipIf(!findChrome())("browser CSS resource grammar parity", () => {
       "main.css": `:root{--candidate:url("tile.svg") 1x} #proof{background-image:image-set(var(--candidate))}`,
       "tile.svg": '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>',
     });
-    const rendered = await inspectRenderedDocument(item.htmlPath);
+    const rendered = await inspect(item.htmlPath);
     expect(rendered.text).toContain("tile.svg");
     expect(() => verifyArtifactResources(readFileSync(item.htmlPath, "utf8"), item.htmlPath, item.base, item.artifact)).toThrow(/dynamic CSS substitution/);
   }, 30_000);

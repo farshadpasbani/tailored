@@ -10,7 +10,8 @@ import {
   analyzeClaimIntegrityPreflight,
   computeClaimBindingHash,
   EvidenceFileSchema,
-  inspectRenderedDocument,
+  inspect,
+  inspectAndPrint,
   migrateCanon,
   parseCanonV2,
   verifyClaimIntegrity,
@@ -46,7 +47,8 @@ describe("public canon v2 API", () => {
     expect(analyzeClaimIntegrityPreflight).toBeTypeOf("function");
     expect(computeClaimBindingHash).toBeTypeOf("function");
     expect(verifyClaimIntegrity).toBeTypeOf("function");
-    expect(inspectRenderedDocument).toBeTypeOf("function");
+    expect(inspect).toBeTypeOf("function");
+    expect(inspectAndPrint).toBeTypeOf("function");
     expect(buildResourceManifest).toBeTypeOf("function");
     expect(verifyPack).toBeTypeOf("function");
     expect(verifyReceiptFreshness).toBeTypeOf("function");

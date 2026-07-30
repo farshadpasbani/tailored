@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ProhibitionConcept } from "../canon/prohibitions.js";
-import type { RenderedDocumentEvidence, RenderedOwnerMarker, RenderedSourceMarker } from "../render/chrome.js";
+import type { DocumentEvidence, OwnerMarker, SourceMarker } from "../render/inspector.js";
 import type { PackGate } from "./gate.js";
 import { htmlToText } from "./text.js";
 import { normalizePhone, tokenizeNumericOccurrences } from "./numeric.js";
@@ -63,7 +63,7 @@ export interface ProhibitedClaimsInput {
    */
   employerAliases?: string[];
   /** Browser-computed text and marker visibility. Required for canon-bound dates. */
-  renderedDocument?: RenderedDocumentEvidence;
+  renderedDocument?: DocumentEvidence;
 }
 
 export interface ProhibitedClaimsResult {
@@ -405,7 +405,7 @@ function isGroundedDateExemption(
   canon: ProhibitedClaimsInput["canon"],
   occurrence: ReturnType<typeof tokenizeNumericOccurrences>[number],
   record: NumericExemption,
-  rendered: RenderedDocumentEvidence | undefined,
+  rendered: DocumentEvidence | undefined,
   occurrenceIndex: number,
 ): boolean {
   const range = occurrence.raw.match(/^((?:19|20)\d{2})\s*[–—-]\s*(Present|(?:19|20)\d{2})$/i);
@@ -450,7 +450,7 @@ function isGroundedDateExemption(
     && hasCanonicalOwners(canon, source, bound[0], rendered.owners ?? []);
 }
 
-function markerOccurrenceIndex(rendered: RenderedDocumentEvidence, marker: RenderedSourceMarker): number {
+function markerOccurrenceIndex(rendered: DocumentEvidence, marker: SourceMarker): number {
   if (marker.offset !== marker.textBefore.length || !rendered.text.startsWith(marker.textBefore)) return -1;
   if (!rendered.text.slice(marker.offset).trimStart().startsWith(marker.text)) return -1;
   return tokenizeNumericOccurrences(marker.textBefore).length;
@@ -490,8 +490,8 @@ function expectedOwners(canon: ProhibitedClaimsInput["canon"], source: DateSourc
 function hasCanonicalOwners(
   canon: ProhibitedClaimsInput["canon"],
   source: DateSource,
-  marker: RenderedSourceMarker,
-  owners: RenderedOwnerMarker[],
+  marker: SourceMarker,
+  owners: OwnerMarker[],
 ): boolean {
   const expected = expectedOwners(canon, source);
   if (expected === undefined) return false;

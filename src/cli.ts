@@ -17,7 +17,7 @@ import { loadJd } from "./jd/load.js";
 import { THRESHOLDS } from "./policy/thresholds.js";
 import { issueBaselineReceipt, prepareRequirementsBaseline, RequirementsSchema, sha256Text, type BaselineReceipt } from "./requirements/schema.js";
 import { migrateLegacyJdToRequirements } from "./requirements/migrate.js";
-import { renderToPdf } from "./render/chrome.js";
+import { render } from "./render/renderer.js";
 import { jdMarkdownToHtml } from "./jd/pdf.js";
 import { version } from "./index.js";
 import { verifyPack, verifyReceiptFreshness } from "./verify/pack.js";
@@ -193,7 +193,7 @@ function addRender(program: Command): void {
     .argument("<html>", "path to the HTML file")
     .argument("<pdf>", "output PDF path")
     .action(async (html: string, pdf: string) => {
-      try { await renderToPdf(html, pdf); }
+      try { await render(html, pdf); }
       catch (e) { fail((e as Error).message); }
       console.log(`PASS: rendered ${html} to ${pdf}`);
     });
@@ -223,7 +223,7 @@ function addJdPdf(program: Command): void {
         // the renderer too as defence in depth: a job description never needs JS.
         // NB: --blink-settings=scriptEnabled=false makes headless Chrome exit 0 while
         // writing no PDF; --disable-javascript disables JS without breaking print-to-pdf.
-        await renderToPdf(htmlPath, pdf, { extraArgs: ["--disable-javascript"] });
+        await render(htmlPath, pdf, { extraArgs: ["--disable-javascript"] });
       } catch (e) { fail((e as Error).message); }
       console.log(`PASS: rendered job description to ${pdf}`);
     });
@@ -262,7 +262,7 @@ function addSmoke(program: Command): void {
       const example = (name: string) => fileURLToPath(new URL(`../examples/alex-rivers/${name}`, import.meta.url));
       const html = example("cv.html");
       const pdf = join(tmpdir(), `tailored-smoke-${process.pid}.pdf`);
-      try { await renderToPdf(html, pdf); }
+      try { await render(html, pdf); }
       catch (e) { fail((e as Error).message); }
       const calls = smokeCalls(html, pdf, example);
       let fitVerdict = "";

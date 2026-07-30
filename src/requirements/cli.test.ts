@@ -5,7 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import yaml from "js-yaml";
 import { describe, expect, it } from "vitest";
-import { findChrome, renderToPdf } from "../render/chrome.js";
+import { findChrome } from "../render/chrome.js";
+import { render } from "../render/renderer.js";
 import { issueBaselineReceipt, prepareRequirementsBaseline, createChangeReceipt, type Requirement } from "./schema.js";
 
 function freezeBaseline(requirements: Requirement[], input: { frozenAt: string; archivedJdSha256: string; issuer: string }) {
@@ -115,7 +116,7 @@ describe.skipIf(!canRun)("requirements v2 CLI", () => {
   it.skipIf(!canRender)("reports literal ATS vocabulary from the rendered PDF without claiming verified fit", async () => {
     const paths = fixture();
     const pdf = join(tmpdir(), `tailored-requirements-ats-${process.pid}.pdf`);
-    await renderToPdf(paths.cv, pdf);
+    await render(paths.cv, pdf);
     const result = run(["requirements-ats", pdf, "--requirements", paths.requirements, "--jd-text", paths.jd, "--canon", paths.canon, "--baseline-receipt", paths.baselineReceipt]);
     expect(result.code).toBe(0);
     expect(result.out).toMatch(/ATS literal vocabulary 100%/);
