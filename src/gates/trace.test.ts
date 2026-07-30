@@ -53,40 +53,91 @@ describe("extractNumericClaims", () => {
 });
 
 describe("untracedNumbers", () => {
-  it("passes a claim whose value appears in the canon corpus", () => {
-    const claims = extractNumericClaims("cut review time by 40%");
-    expect(untracedNumbers(claims, "reduced load by 40 percent", "")).toEqual([]);
-  });
-  it("matches equivalent forms: 40% in the doc traces to a bare 40 in the canon", () => {
-    const claims = extractNumericClaims("grew revenue 40%");
-    expect(untracedNumbers(claims, "a team of 40", "")).toEqual([]);
+  const raws = (text: string, canonText: string, jdText = "") =>
+    untracedNumbers(text, canonText, jdText).map((c) => c.raw);
+
+  it("traces a percentage to the same figure the canon spells out as a word", () => {
+    expect(raws("cut review time by 40%", "cut review time by 40 percent")).toEqual([]);
   });
   it("flags a claim with no matching value anywhere in the canon or jd text", () => {
-    const claims = extractNumericClaims("cut latency by 47%");
-    const r = untracedNumbers(claims, "no numbers here", "");
-    expect(r).toEqual(claims);
+    expect(raws("cut latency by 47%", "no numbers here")).toEqual(["47%"]);
   });
   it("also traces against the jd text", () => {
-    const claims = extractNumericClaims("a team of 12");
-    expect(untracedNumbers(claims, "", "we are a team of 12 people")).toEqual([]);
+    expect(raws("a team of 12", "", "we are a team of 12 people")).toEqual([]);
   });
   it("flags a fabricated magnitude-suffixed metric (2M users) with no trace", () => {
-    const claims = extractNumericClaims("served 2M concurrent users");
-    const r = untracedNumbers(claims, "no such scale in the canon", "");
-    expect(r.map((c) => c.raw)).toEqual(["2M"]);
+    expect(raws("served 2M concurrent users", "no such scale in the canon")).toEqual(["2M"]);
   });
   it("flags a fabricated 40k-style metric with no trace", () => {
-    const claims = extractNumericClaims("saved 40k annually");
-    const r = untracedNumbers(claims, "nothing numeric", "");
-    expect(r.map((c) => c.raw)).toEqual(["40k"]);
+    expect(raws("saved 40k annually", "nothing numeric")).toEqual(["40k"]);
   });
   it("traces a glued magnitude form to its expanded value in the canon", () => {
-    const claims = extractNumericClaims("scaled to 2M users");
-    expect(untracedNumbers(claims, "grew the platform to 2,000,000 users", "")).toEqual([]);
+    expect(raws("scaled to 2M users", "grew the platform to 2,000,000 users")).toEqual([]);
   });
   it("traces a glued magnitude form to the same glued form in the canon", () => {
-    const claims = extractNumericClaims("cut costs by 40k");
-    expect(untracedNumbers(claims, "reduced spend by 40k a year", "")).toEqual([]);
+    expect(raws("cut costs by 40k", "reduced spend by 40k a year")).toEqual([]);
+  });
+
+  // The tightening: an equal value somewhere in the corpus is no longer a trace.
+  it("does not ground a number on a list enumerator in the canon's claims prose", () => {
+    // The card-3 review's reproduction. The canon numbers three kinds of leadership
+    // "1. 2. 3."; nothing in it counts three of anything, so "3 engineers" must not pass.
+    const canonText = "Leadership shows up in three ways - 1. team leadership 2. technical leadership 3. community leadership.";
+    expect(raws("mentored 3 engineers on the platform team", canonText)).toEqual(["3"]);
+  });
+  it("treats a list enumerator in the document as markup, not as a claim to justify", () => {
+    expect(extractNumericClaims("1. Built the gate.\n2. Shipped it.")).toEqual([]);
+  });
+  it("flags the same value reused in an unrelated sense despite one shared word", () => {
+    // "production" alone bridges two unrelated sentences; one shared word is not context.
+    const canonText = "Built to production standard: a 118-test suite, semantic-versioned releases.";
+    expect(raws("shipped 118 features to production", canonText)).toEqual(["118"]);
+  });
+  it("traces a paraphrase that shares the clause vocabulary", () => {
+    const canonText = "Coding agents have landed 31 agent-authored patches across the review queue.";
+    expect(raws("agents have merged 31 patches into the review queue", canonText)).toEqual([]);
+  });
+  it("traces a digit to the count the canon spells out as a word", () => {
+    expect(raws("landed work across 6 of the services", "patches across six of the services")).toEqual([]);
+  });
+  it("treats a matching at-least marker as comparable context", () => {
+    // The employer's own figure, quoted in the candidate's own words: same value, both
+    // open-ended, and no vocabulary in common between the two sentences.
+    expect(raws("kept honest across 180-odd depots", "", "we work with 180+ regional yards")).toEqual([]);
+  });
+  it("treats a matching range pairing as comparable context", () => {
+    expect(raws("built 0 to 1 and self-hosted", "", "shipped 0-1 products end to end")).toEqual([]);
+  });
+  it("treats an identical written form as comparable context", () => {
+    expect(raws("4th Intl. Workshop on Retrieval", "4th International Workshop on Retrieval")).toEqual([]);
+  });
+  it("never grounds a percentage on a bare count of the same value", () => {
+    expect(raws("grew revenue 40%", "a team of 40 people grew revenue")).toEqual(["40%"]);
+  });
+  it("never grounds a currency amount on a bare count of the same value", () => {
+    expect(raws("delivered £9,000 of savings", "surveyed a 9,000+ unit estate")).toEqual(["£9,000"]);
+  });
+  it("flags a count claimed where the canon states a percentage, same words either side", () => {
+    expect(raws("automation cut review time by 55 hours", "automation cut review time by roughly 55%")).toEqual(["55"]);
+  });
+
+  // Edges: a claim can sit at index 0, at the end of the text, or with no neighbouring
+  // words at all, and the context walk must handle each without reaching outside the text.
+  it("traces a claim that has no neighbouring words, on its written form alone", () => {
+    expect(raws("40%", "40%")).toEqual([]);
+  });
+  it("flags a claim that has no neighbouring words and no comparable form", () => {
+    expect(raws("40", "a team of 40 people")).toEqual(["40"]);
+  });
+  it("handles a claim at the very start of the text", () => {
+    expect(raws("12 engineers joined", "12 engineers joined the team")).toEqual([]);
+  });
+  it("handles a claim at the very end of the text", () => {
+    expect(raws("the review queue held 12", "12 engineers joined the team")).toEqual(["12"]);
+  });
+  it("returns nothing for empty text or an empty corpus without throwing", () => {
+    expect(raws("", "")).toEqual([]);
+    expect(raws("shipped 9 releases", "")).toEqual(["9"]);
   });
 });
 

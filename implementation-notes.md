@@ -983,6 +983,126 @@ redefine the word STRONG.
   numeric value alone — see above), `verify/pack.ts`'s own tmp-then-rename (a fourth
   instance, outside criterion 3's three), and `corpus.test.ts`'s source-text greps.
 
+## Backlog 017: a number is traced only when its context matches, not its bare value
+
+Referred to the owner by the card-3 review and authorised on 2026-07-30. `untracedNumbers`
+built a `Set` of bare numeric VALUES from the canon and JD text, so any equal number
+anywhere grounded any document number regardless of meaning. The reviewer's reproduction: a
+canon whose `claims.can` prose numbers its forms `1. 2. 3.` grounded an unrelated document
+`3`. Examples below are the synthetic ones from `trace.test.ts`; per this file's header, real
+figures and company names stay in the external vault audit.
+
+### The rule
+
+A document number is traced when the corpus states the SAME VALUE with the SAME SYMBOL and
+at least one of these agrees. Strongest first:
+
+| signal | synthetic example | why it is comparable context |
+| --- | --- | --- |
+| written form | doc `40k` ← canon `40k` | the same figure written the same way; bare digits carry no such signal, so a bare form never qualifies |
+| at-least marker | doc `180-odd depots` ← JD `180+ regional yards` | same value, both open-ended: the employer's own figure in the candidate's words |
+| range pairing | doc `0 to 1` ← JD `0-1 products` | one figure written as a pair |
+| adjacent word | doc `2M users` ← canon `2,000,000 users` | the noun the number quantifies |
+| two clause words | doc `merged 31 patches into the review queue` ← canon `landed 31 agent-authored patches across the review queue` | a paraphrase of one fact shares several words |
+
+Two decisions did the heavy lifting, both forced by measurement rather than taste:
+
+- **The symbol must agree.** A percentage never grounds a plain count, nor does a currency
+  amount. Without it, "automation cut review time by 55 hours" passed on a canon's
+  "automation cut review time by roughly 55%" - every word around it matched and the figure
+  was still a fabrication. This is the one place the gate is stricter than "context matches".
+- **Two shared clause words, not one.** One common word bridges unrelated sentences:
+  "shipped 118 features to production" borrowed a canon's "118-test suite, built to
+  production standard" on the single word "production". Two is the smallest requirement that
+  separates a paraphrase from a coincidence.
+
+`CLAUSE_CHARS = 100` bounds the clause. A canon field is one line holding several long
+sentences, so an unbounded sentence scope let a number borrow vocabulary sixty words away.
+Swept over the real corpus at 60/70/80/100/120 characters the newly-flagged count runs
+5/2/2/1/1: 100 is the smallest cap at which no legitimately-supported number is flagged, and
+acceptance makes a false alarm a blocker, so that is where it sits.
+
+A list enumerator - one or two digits followed by "." or ")" at a line start or just inside a
+bracket - is dropped from BOTH sides: neither a claim to justify nor evidence for one.
+Spelled cardinals are added on the evidence side only, because a canon writes small counts in
+words where a document writes the digit; a spelled word is a fact the corpus states, never a
+claim a document must justify.
+
+`numeric.ts` is untouched (`git diff` over it is empty), so what `prohibitedClaims` and
+`claimIntegrity` see from the shared tokeniser cannot have moved. All new logic sits in
+`trace.ts`, which already received `raw`, `index` and `end` for every occurrence.
+
+### Real-corpus measurement (aggregate; per-document detail is external)
+
+Read-only copy of the downstream vault, 245 documents plus the bundled example, run at the
+merge base and at HEAD against the vault's own canon and each pack's archived job
+description. No vault file was written.
+
+| | merge base | HEAD |
+| --- | --- | --- |
+| documents | 245 | 245 |
+| numeric claims extracted | 896 | 896 |
+| untraced numbers | 41 | 42 |
+| documents failing trace | 40 | 41 |
+| packs failing trace | 29 | 30 |
+| numbers newly untraced | — | **1** |
+| numbers no longer untraced | — | 0 |
+
+The claim count is identical, which says no real document carries a list enumerator in its
+rendered text: the house style uses bullets, and CSS counters never reach the text layer.
+
+**The single newly-untraced number is a genuine gap**, and the sanitised shape of it is this:
+a document repeats a stale test-suite count that the canon has since revised upward. The
+corpus holds 42 copies of that stale figure and 41 of them ALREADY failed at the merge base.
+The 42nd survived only because its archived job description and the canon each mention the
+same number as a PERCENTAGE of unrelated things. Neither survives the symbol rule, so it now
+fails for exactly the reason its 41 siblings already did: the tightening made the gate
+consistent here, not noisy. The owner's remedy is to correct the figure or declare a metric
+claim. The document and pack are named in the handoff, not here.
+
+Cases that a first, stricter rule wrongly flagged and the shipped rule correctly traces, each
+checked by hand against the corpus text: a RIBA stage range (24 numbers), four at-least
+counts with synonym nouns, thirteen paraphrases of one agent-activity count, seven phrasings
+of one retrieval metric, a percentage written as a word, a magnitude-suffixed dataset scale, a
+range idiom, a years-of-experience figure, and the identity phone number in 198 documents.
+Each is a figure the canon or the JD does support in that sense, so flagging any of them would
+have been the blocker this unit names.
+
+### Adversarial controls (does it still bite?)
+
+Run against the shipped build with the real canon as the corpus. Seven of eight must-flag
+cases object: a count where the canon states a percentage, a test count reused as a feature
+count, an invented currency amount, two fabricated metrics absent from the canon, a canon
+number borrowed for a different noun, an ordinal borrowed as a count. Twelve of twelve
+must-trace cases stay quiet. The reproduction is red at the merge base and green now, at both
+CLI and unit level.
+
+**The one control that still passes when it should not**, recorded rather than hidden: a
+fabricated latency figure traces because it coincides in value with a retrieval metric and
+its sentence shares a two-word phrase with the canon's - and that same phrase is the only
+evidence grounding a legitimate document's paraphrase of that metric. A word-overlap matcher
+cannot separate those two; only meaning can. The hole is far narrower than the one it replaces
+(an equal value ANYWHERE grounded anything), and `claim-integrity` is the gate that binds a
+figure to an evidence record. `trace`'s summary still says it does not prove semantic truth,
+and that sentence is now closer to true than it was.
+
+### The pack lane is untouched
+
+- `traceGate.run` is still `null`; the receipt lane never calls trace.
+- `verify-pack` over `src/verify/fixtures/legacy-pack` at the merge base and at HEAD: 18
+  findings, identical in id, order, verdict and message; receipt shape identical; 39 of 41
+  binding fields identical. The two that differ are the PDF digests, which also differ between
+  two runs of the SAME build (Chrome stamps a creation time), so the receipt hash moving is PDF
+  nondeterminism, not this change. Both HTML digests are byte-identical.
+
+### Verification
+
+- `npm test`: 532 passed, 1 skipped, 54 files. `npm run lint:self` clean. `node dist/cli.js
+  smoke` passes.
+- CLI oracle over 24 invocations (validate, lint, ip-guard, legacy-fit, fit, claim-integrity,
+  trace in six configurations, impact, distinct, migrate-canon, migrate-requirements, help,
+  version): byte-identical at the merge base and at HEAD, exit codes included. The `ats`
+  warning text is untouched.
 ## Backlog 018: a renderer, an inspector, and testable inspection maths
 
 ### Shape
