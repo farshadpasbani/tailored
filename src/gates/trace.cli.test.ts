@@ -40,6 +40,26 @@ describe.skipIf(!canRun)("tailored trace CLI", () => {
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/PASS: trace/);
   });
+  it("does not ground a document number on a list enumerator in the canon's claims prose", () => {
+    // The card-3 review's reproduction, end to end: the canon's claims.can prose numbers
+    // three kinds of leadership "1. 2. 3.", and the document claims three mentored
+    // engineers. Nothing in the canon counts three of anything, so the gate must object.
+    const canon = join(tmpdir(), `trace-enum-canon-${process.pid}.yaml`);
+    writeFileSync(canon, [
+      "identity:", "  name: Alex Rivers", "  role: AI Engineer",
+      "experience:", "  - title: Senior AI Engineer", "    org: Meridian Labs",
+      "    start: '2022'", "    end: Present", "    bullets: ['Built the platform']",
+      "claims:", "  can:",
+      "    - Leadership shows up in three ways - 1. team leadership 2. technical leadership 3. community leadership.",
+      "",
+    ].join("\n"));
+    const doc = join(tmpdir(), `trace-enum-doc-${process.pid}.html`);
+    writeFileSync(doc, "<p>Mentored 3 engineers on the platform team.</p>");
+    const r = run(["trace", doc, "--canon", canon]);
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/untraced claim: "3"/);
+  });
+
   it("fails on a missing canon file", () => {
     const r = run(["trace", `${ex}/cv.html`, "--canon", "/no/such/canon.yaml"]);
     expect(r.code).toBe(1);
