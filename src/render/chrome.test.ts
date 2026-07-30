@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { existsSync } from "node:fs";
 import { findChrome, headlessChromeArgs, locateChrome } from "./chrome.js";
 
 describe("finding Chrome on a machine", () => {
@@ -21,23 +22,26 @@ describe("finding Chrome on a machine", () => {
   it("returns null when nothing is installed", () => {
     expect(locateChrome({ env: {}, platform: "linux", exists: () => false })).toBeNull();
   });
-  it("answers for the real machine too", () => {
-    expect([null, "string"]).toContain(findChrome() === null ? null : "string");
+  it("only ever names a binary that is really there", () => {
+    const found = findChrome();
+    if (found !== null) expect(existsSync(found)).toBe(true);
   });
 });
 
 describe("the flags every headless run shares", () => {
+  // Restored even when an assertion throws: a leaked CI or CHROME_BIN would silently
+  // change what every later test in the file sees.
+  afterEach(() => vi.unstubAllEnvs());
+
   it("keeps the sandbox on for local use", () => {
     vi.stubEnv("CI", "");
     expect(headlessChromeArgs()).not.toContain("--no-sandbox");
-    vi.unstubAllEnvs();
   });
   it("disables the sandbox under CI, which cannot initialise it", () => {
     vi.stubEnv("CI", "1");
     const args = headlessChromeArgs();
     expect(args).toContain("--no-sandbox");
     expect(args).toContain("--disable-dev-shm-usage");
-    vi.unstubAllEnvs();
   });
   it("gives printing and inspection the same page geometry", () => {
     expect(headlessChromeArgs()).toContain("--window-size=1240,1754");

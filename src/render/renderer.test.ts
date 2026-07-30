@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -20,11 +20,14 @@ const fakeChrome = (body: string): { bin: string; argv: () => string[] } => {
 };
 
 describe("render", () => {
+  // Restored even when an assertion throws: a leaked CHROME_BIN would point every later
+  // test in the file at the previous case's fake Chrome.
+  afterEach(() => vi.unstubAllEnvs());
+
   it("throws when Chrome exits 0 but writes no PDF (a silent failure)", async () => {
     const chrome = fakeChrome(":");
     vi.stubEnv("CHROME_BIN", chrome.bin);
     await expect(render(html, join(dir, "out-noop.pdf"))).rejects.toThrow(/produced no PDF/);
-    vi.unstubAllEnvs();
   });
 
   it("throws when Chrome writes an empty PDF", async () => {
@@ -32,7 +35,6 @@ describe("render", () => {
     const chrome = fakeChrome(`: > "${out}"`);
     vi.stubEnv("CHROME_BIN", chrome.bin);
     await expect(render(html, out)).rejects.toThrow(/produced no PDF/);
-    vi.unstubAllEnvs();
   });
 
   it("resolves when the PDF is written and non-empty", async () => {
@@ -40,7 +42,6 @@ describe("render", () => {
     const chrome = fakeChrome(`printf '%%PDF-1.4 stub' > "${out}"`);
     vi.stubEnv("CHROME_BIN", chrome.bin);
     await expect(render(html, out)).resolves.toBeUndefined();
-    vi.unstubAllEnvs();
   });
 
   it("asks Chrome to print this document to that path, headless and without a header", async () => {
@@ -48,7 +49,6 @@ describe("render", () => {
     const chrome = fakeChrome(`printf '%%PDF-1.4 stub' > "${out}"`);
     vi.stubEnv("CHROME_BIN", chrome.bin);
     await render(html, out);
-    vi.unstubAllEnvs();
     const argv = chrome.argv();
     expect(argv).toContain("--headless=new");
     expect(argv).toContain("--no-pdf-header-footer");
@@ -61,7 +61,6 @@ describe("render", () => {
     const chrome = fakeChrome(`printf '%%PDF-1.4 stub' > "${out}"`);
     vi.stubEnv("CHROME_BIN", chrome.bin);
     await render(html, out, { extraArgs: ["--disable-javascript"] });
-    vi.unstubAllEnvs();
     const argv = chrome.argv();
     expect(argv).toContain("--disable-javascript");
     expect(argv.indexOf("--disable-javascript")).toBeLessThan(argv.indexOf(`--print-to-pdf=${out}`));
@@ -73,6 +72,5 @@ describe("render", () => {
     chmodSync(bin, 0o755);
     vi.stubEnv("CHROME_BIN", bin);
     await expect(render(html, join(dir, "out-fail.pdf"))).rejects.toThrow(/chrome is unhappy/);
-    vi.unstubAllEnvs();
   });
 });

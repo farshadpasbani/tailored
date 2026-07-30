@@ -6,13 +6,17 @@ import {
 } from "./algorithms.js";
 
 /**
- * Owns the one script Chrome runs inside the page: the typed algorithms above, serialised
- * verbatim, plus a shell that does nothing but read the DOM and hand plain data to them.
- * The shell holds no arithmetic, so the decisions it reports are the ones unit-tested in
- * Node - the browser only supplies styles, rectangles and text.
+ * Owns every script Chrome runs inside the page: the document script (the typed algorithms
+ * above, serialised verbatim, plus a shell that does nothing but read the DOM and hand plain
+ * data to them) and the expression that waits for its result. The shell holds no arithmetic,
+ * so the decisions it reports are the ones unit-tested in Node - the browser only supplies
+ * styles, rectangles and text.
  */
 
-/** Serialised into the page. Order matters only in that every callee must be bound first. */
+/** How long the page may take to publish its evidence once the document has loaded. */
+const EVIDENCE_READY_TIMEOUT_MS = 10_000;
+
+/** Serialised into the page. These are all const declarations, so the order is free. */
 const INJECTED_FUNCTIONS = [
   normalizeWhitespace, parseCssColor, relativeLuminance, contrastRatio, isInkPainted,
   isLegibleAgainst, backdropBehind, rectIntersects, paintedRects, concealsSubtree, clipBoundsThrough,
@@ -223,3 +227,18 @@ export function buildInspectionSource(): string {
 
 /** The DOM-reading half on its own. Exported so a test can prove it holds no arithmetic. */
 export const DOM_SHELL_SOURCE = DOM_WALK_SHELL;
+
+/**
+ * The expression that waits for the document script's result. The script publishes
+ * asynchronously - after fonts settle and one turn of the event loop - so the transport polls
+ * for the evidence rather than guessing a delay.
+ */
+export const AWAIT_EVIDENCE_EXPRESSION = String.raw`new Promise((resolve, reject) => {
+  const started = Date.now();
+  const check = () => {
+    if (window.__TAILORED_EVIDENCE__) resolve(window.__TAILORED_EVIDENCE__);
+    else if (Date.now() - started > ${EVIDENCE_READY_TIMEOUT_MS}) reject(new Error("inspection readiness timeout"));
+    else setTimeout(check, 10);
+  };
+  check();
+})`;

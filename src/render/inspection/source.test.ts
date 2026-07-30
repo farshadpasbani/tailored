@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import * as algorithms from "./algorithms.js";
-import { DOM_SHELL_SOURCE, INJECTED_ALGORITHM_NAMES, buildInspectionSource, injectedAlgorithmSource } from "./source.js";
+import { AWAIT_EVIDENCE_EXPRESSION, DOM_SHELL_SOURCE, INJECTED_ALGORITHM_NAMES, buildInspectionSource, injectedAlgorithmSource } from "./source.js";
 
 /** The algorithm half of the injected script, evaluated exactly as the browser would. */
 const inPage = new Function(`${injectedAlgorithmSource()}\nreturn { ${INJECTED_ALGORITHM_NAMES.join(", ")} };`)() as Record<string, any>;
@@ -92,5 +92,14 @@ describe("the DOM-reading shell", () => {
     const source = buildInspectionSource();
     expect(() => new Function(source)).not.toThrow();
     expect(source.match(/window\.__TAILORED_[A-Z_]+/g)).toEqual(["window.__TAILORED_EVIDENCE__"]);
+  });
+
+  it("waits on the same global the document script publishes", () => {
+    // Two separate scripts share one name. If they ever disagreed the symptom would be a
+    // ten-second readiness timeout, with nothing to say which half was wrong.
+    expect(() => new Function(`return ${AWAIT_EVIDENCE_EXPRESSION}`)).not.toThrow();
+    const published = new Set(buildInspectionSource().match(/window\.__TAILORED_[A-Z_]+/g));
+    for (const awaited of AWAIT_EVIDENCE_EXPRESSION.match(/window\.__TAILORED_[A-Z_]+/g) ?? [])
+      expect(published).toContain(awaited);
   });
 });

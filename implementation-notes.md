@@ -999,11 +999,18 @@ redefine the word STRONG.
   - `render/inspection/{algorithms,source,cdp}.ts` - the inspector's
     implementation: the pure maths, the script generated from it, and the one
     transport.
-  - `render/chrome.ts` survives at 32 lines as what both modules share: where the
+  - `render/chrome.ts` survives at 47 lines as what both modules share: where the
     binary is (`findChrome`, plus `locateChrome(probe)` for the discovery tests)
     and the flags every headless run uses. Keeping that name is why
     `production.test.ts` needed no edit at all - it imports `findChrome` from
     this path, and so do five other suites.
+
+    Corrected after review: the pushed commit message says "32 lines", which is
+    the diff's added count - 15 more lines survived from the original file
+    untouched. 47 is the size of the residue, and since that size is the whole
+    argument that this is a shared module rather than a compatibility shim, the
+    right number matters. The commit message was left as pushed rather than
+    rewriting the branch's history.
 
 ### The maths is typed and checked against the standard, not against itself
 
@@ -1126,7 +1133,9 @@ redefine the word STRONG.
 ### Deviation: diff budget
 
 - The budget was 12 production files and 600 new production lines. Files: 11.
-  Added production lines: 776, against 492 deleted, so +284 net. The overage is
+  Added production lines: 790, against 492 deleted, so +298 net (776/+284 before
+  the review remediation below, which added the readiness expression's new home
+  and a narrowed transport seam). The overage is
   relocation the metric cannot see: `chrome.ts` sheds 468 lines and 149 of them
   reappear verbatim as `inspection/cdp.ts` while about 150 more are the injected
   script moving into `inspection/source.ts`. Git's own copy detection does not
@@ -1135,6 +1144,15 @@ redefine the word STRONG.
   speculative to remove: the genuinely new code is `algorithms.ts` (152 lines,
   replacing untyped blob maths) and the per-field documentation criterion 2 asks
   for on the evidence types. The budget was not raised.
+- The structure review measured the relocation claim line by line rather than
+  taking it: 320 of about 666 non-blank lines are verbatim from the base, leaving
+  about 456 genuinely new, inside the 600 ceiling. Measured before the
+  remediation below.
+- **Tests are over budget too, which the first report failed to state**: 639
+  added and 109 deleted, so +530 net against a 500 ceiling. Named rather than
+  defended - though the spend is where the acceptance pointed: 49 browserless
+  algorithm cases, 16 for the generated source, and the first direct coverage
+  `inspectAndPrint` has ever had.
 
 ### Deviation: two files outside the stated allowed paths
 
@@ -1153,3 +1171,65 @@ redefine the word STRONG.
   writes a PDF of Chrome's error page. It predates this unit and the oracle pins
   the behaviour at both ends; changing it is a verdict change, so it was left
   alone.
+
+### Review remediation (dual review, 2026-07-30)
+
+- **`CONTEXT.md`'s map was stale, which was the highest-value finding.** Its
+  "Renderer / Inspector" entry still opened "Two modules currently glued into
+  `render/chrome.ts`" - a sentence that becomes false on merge, in the one
+  document that tells a reader how the layer fits together. It now names the
+  six-module shape, says `inspection/**` is package-internal, and says what
+  `chrome.ts` is: the machine probe both public modules share, deliberately not a
+  compatibility shim.
+- **Three dead seams in `cdp.ts`.** `DEVTOOLS_TIMEOUT_MS` and `class CdpPage` were
+  exported with no consumer outside the file, and `CdpPage.connect(url, factory,
+  timeoutMs)` carried two defaulted parameters that no test used - test-only
+  injection points with no test behind them, which is the pattern criterion 6
+  exists to remove. All three are module-private now and `connect` takes one
+  argument. The module exports exactly four things, each with a caller: the three
+  bounded handshake primitives the timeout tests drive, and `withCdpPage`.
+- **What `withCdpPage` hands its caller is now named and narrowed.** Un-exporting
+  the class left it in an exported signature, so the callback parameter is a small
+  `CdpCommands` interface: `send` and `waitFor`, no `close`. The lifecycle belongs
+  to `withCdpPage`, which must be able to tear down what it opened, so the caller
+  should not be able to close the page underneath it. Recorded because the first
+  attempt justified exporting that interface with a claim about declaration emit;
+  a real `npm run build` with the keyword removed is clean, so the claim was wrong
+  and the export went the way of the other three. `--noEmit` cannot decide that
+  question - it skips the declaration pass where the error would appear.
+- **The readiness expression moved to where the in-page scripts live.** It was a
+  nine-line untyped browser-JS template in `inspector.ts` with a bare `10000`
+  inside it, a second injected script sitting outside the module documented as
+  owning them. It is `AWAIT_EVIDENCE_EXPRESSION` in `source.ts` now, with
+  `EVIDENCE_READY_TIMEOUT_MS` named the way `cdp.ts` names its two timeouts. A new
+  test pins that the poll waits on the same global the document script publishes:
+  two scripts share one name, and the symptom of disagreement would be a
+  ten-second timeout with nothing to say which half was wrong.
+- **A comment stated a constraint that does not exist.** `INJECTED_FUNCTIONS` was
+  annotated "order matters only in that every callee must be bound first". They are
+  all `const` declarations initialised before any of them is called, so the order
+  is free; the comment now says so.
+- **A tautological test is gone.** `expect([null, "string"]).toContain(findChrome()
+  === null ? null : "string")` passes for every possible return value. It now
+  asserts the thing worth asserting: when discovery names a binary, that path
+  exists.
+- **`vi.stubEnv` is restored in `afterEach`, not inline.** Seven sites across two
+  files unstubbed on the happy path only, so a failing assertion would leak `CI` or
+  `CHROME_BIN` into every later test in the file. Verified by throwaway probe
+  rather than by reasoning: a test that stubs `CI` and then fails is followed by one
+  that still sees a clean environment.
+- **Proof that moving browser code changed nothing**: the fixture receipt's 18
+  findings, their order, severities, `ok` flags and messages are byte-identical to
+  the pre-change baseline, both staged HTML files are byte-identical, and all nine
+  ip-guard and claim-integrity oracle lanes are byte-identical. 61 of 63 oracle
+  records match, the same two as before (`smoke`'s example path, and the receipt
+  hash that moves between runs of any one build).
+- Left for the owner or a later card, per the reviewers: the DOM-vocabulary half of
+  criterion 2 (`prohibitedClaims` still branches on `tag`/`classes`/`parent*`/
+  `context*` in ten places - ending that means redesigning the grounded-date
+  exemption, which is a scope change to agree with the owner, not a cleanup);
+  branding `DebugLocator`; the mutually-incomparable `metaGroup`/`parentGroup`/
+  `contextGroup` namespaces; `render <missing-file>` exiting 0 with a PASS line and
+  a PDF of Chrome's error page; `receiptSha256` nondeterminism across runs of one
+  build; and the marker sentinel walking past `Z` beyond 26 markers. The last four
+  are pre-existing.

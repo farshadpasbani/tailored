@@ -11,14 +11,23 @@ import { headlessChromeArgs } from "../chrome.js";
  */
 
 /** How long any single DevTools handshake or request may take before it is abandoned. */
-export const DEVTOOLS_TIMEOUT_MS = 10_000;
+const DEVTOOLS_TIMEOUT_MS = 10_000;
 /** How long a CDP command may take. Printing a long document is slower than a handshake. */
 const COMMAND_TIMEOUT_MS = 15_000;
 
 interface CdpResponse { id?: number; method?: string; params?: unknown; result?: unknown; error?: { message: string }; }
 
+/**
+ * What a caller inside `withCdpPage` may do with the page. Closing it is deliberately absent:
+ * the lifecycle belongs to `withCdpPage`, which must be able to tear down what it opened.
+ */
+interface CdpCommands {
+  send<T = any>(method: string, params?: Record<string, unknown>): Promise<T>;
+  waitFor<T = any>(method: string, timeoutMs?: number): Promise<T>;
+}
+
 /** A live page: send commands, await one event, and nothing else. */
-export class CdpPage {
+class CdpPage implements CdpCommands {
   private nextId = 1;
   private pending = new Map<number, { resolve: (value: any) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>();
   private events = new Map<string, Array<(value: any) => void>>();
@@ -42,8 +51,8 @@ export class CdpPage {
       this.pending.clear();
     });
   }
-  static async connect(url: string, factory: (url: string) => WebSocket = value => new WebSocket(value), timeoutMs = DEVTOOLS_TIMEOUT_MS): Promise<CdpPage> {
-    return new CdpPage(await openDevtoolsSocket(url, factory, timeoutMs));
+  static async connect(url: string): Promise<CdpPage> {
+    return new CdpPage(await openDevtoolsSocket(url));
   }
   send<T = any>(method: string, params: Record<string, unknown> = {}): Promise<T> {
     const id = this.nextId++;
@@ -112,7 +121,7 @@ export async function openDevtoolsSocket(url: string, factory: (url: string) => 
  * its throwaway profile and the page are all closed before this returns, whether `use`
  * returned or threw.
  */
-export async function withCdpPage<T>(binary: string, use: (page: CdpPage) => Promise<T>): Promise<T> {
+export async function withCdpPage<T>(binary: string, use: (page: CdpCommands) => Promise<T>): Promise<T> {
   const profile = mkdtempSync(join(tmpdir(), "tailored-cdp-"));
   const chrome = spawn(binary, [...headlessChromeArgs(["--remote-debugging-port=0", `--user-data-dir=${profile}`]), "about:blank"]);
   let stderr = "";

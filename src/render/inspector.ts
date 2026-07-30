@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { findChrome } from "./chrome.js";
 import { withCdpPage } from "./inspection/cdp.js";
-import { buildInspectionSource } from "./inspection/source.js";
+import { AWAIT_EVIDENCE_EXPRESSION, buildInspectionSource } from "./inspection/source.js";
 
 /**
  * Owns the answer to "what did the browser actually paint?": it loads a document in Chrome
@@ -98,20 +98,6 @@ export interface DocumentEvidence {
   generatedContent: GeneratedContent[];
 }
 
-/**
- * The injected script publishes its evidence asynchronously, after fonts settle and one turn
- * of the event loop. Poll for it rather than guess a delay.
- */
-const AWAIT_EVIDENCE = `new Promise((resolve, reject) => {
-  const started = Date.now();
-  const check = () => {
-    if (window.__TAILORED_EVIDENCE__) resolve(window.__TAILORED_EVIDENCE__);
-    else if (Date.now() - started > 10000) reject(new Error("inspection readiness timeout"));
-    else setTimeout(check, 10);
-  };
-  check();
-})`;
-
 async function inspectDocument(htmlPath: string, pdfPath?: string): Promise<DocumentEvidence> {
   const binary = findChrome();
   if (!binary) throw new Error("No Chrome/Chromium found. Set CHROME_BIN or install Google Chrome.");
@@ -124,7 +110,7 @@ async function inspectDocument(htmlPath: string, pdfPath?: string): Promise<Docu
     await page.send("Page.navigate", { url: pathToFileURL(resolve(htmlPath)).href });
     await loaded;
     const evaluated = await page.send<{ result?: { value?: DocumentEvidence }; exceptionDetails?: unknown }>("Runtime.evaluate", {
-      expression: AWAIT_EVIDENCE,
+      expression: AWAIT_EVIDENCE_EXPRESSION,
       awaitPromise: true,
       returnByValue: true,
     });
