@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import type { Canon } from "../canon/schema.js";
 import type { EvidenceFile } from "../evidence/schema.js";
-import type { RenderedDocumentEvidence } from "../render/chrome.js";
+import type { DocumentEvidence } from "../render/inspector.js";
 import { analyzeClaimIntegrity, analyzeClaimIntegrityPreflight, computeClaimBindingHash } from "./claimIntegrity.js";
 
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -28,7 +28,7 @@ function plan(html: string, claims: EvidenceFile["claims"] = []): EvidenceFile {
   return seal({ schemaVersion: 2, artifacts: [{ id: "cv", path: "cv.html", sha256: artifactSha256 }], employerSources: [], claims: claims.length ? claims : defaults });
 }
 function seal(evidence: EvidenceFile): EvidenceFile { for (const claim of evidence.claims) claim.bindingSha256 = computeClaimBindingHash(claim, evidence, canon); return evidence; }
-function rendered(text = claimText, id = "cv.review-time", subject = "candidate", authority = "candidate", units = [{ path: "html > body > p", tag: "p", text, visible: true, claimIds: [id], structuralReasons: [] }]): RenderedDocumentEvidence {
+function rendered(text = claimText, id = "cv.review-time", subject = "candidate", authority = "candidate", units = [{ locator: "html > body > p", tag: "p", text, visible: true, claimIds: [id], structuralReasons: [] }]): DocumentEvidence {
   return { text, printText: text, markers: [], owners: [], claims: [{ id, text, subject, authority, visible: true }], textUnits: units, generatedContent: [] };
 }
 function run(html = marked(), evidence = plan(html), browser = rendered()) {
@@ -64,9 +64,9 @@ describe("claim integrity", () => {
   });
 
   it("requires complete final evidence and rejects visible CSS-generated content", () => {
-    expect(run(marked(), plan(marked()), { ...rendered(), generatedContent: [{ path: "html > body > p", pseudo: "::before", text: "Injected", visible: true }] }).issues.some(i => i.kind === "generated-content")).toBe(true);
-    const incomplete = { ...rendered() } as Partial<RenderedDocumentEvidence>; delete incomplete.generatedContent;
-    expect(run(marked(), plan(marked()), incomplete as RenderedDocumentEvidence).issues.some(i => i.kind === "rendered-evidence-incomplete")).toBe(true);
+    expect(run(marked(), plan(marked()), { ...rendered(), generatedContent: [{ locator: "html > body > p::before", text: "Injected", visible: true }] }).issues.some(i => i.kind === "generated-content")).toBe(true);
+    const incomplete = { ...rendered() } as Partial<DocumentEvidence>; delete incomplete.generatedContent;
+    expect(run(marked(), plan(marked()), incomplete as DocumentEvidence).issues.some(i => i.kind === "rendered-evidence-incomplete")).toBe(true);
   });
 
   it.each([

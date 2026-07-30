@@ -13,7 +13,8 @@ import { loadRequirements } from "./requirements/schema.js";
 import { analyzeTrace, extractTitledEntries, extractProjectNames } from "./gates/trace.js";
 import { analyzeImpact, defaultImpactOptions } from "./gates/impact.js";
 import { extractPdfText } from "./gates/run.js";
-import { renderToPdf, findChrome } from "./render/chrome.js";
+import { findChrome } from "./render/chrome.js";
+import { render } from "./render/renderer.js";
 import yaml from "js-yaml";
 
 describe("alex-rivers example", () => {
@@ -71,7 +72,7 @@ describe.skipIf(!canRender)("alex-rivers ats gate (rendered)", () => {
     expect(jd.ok).toBe(true);
     if (!jd.ok) return;
     const pdf = join(tmpdir(), `tailored-smoke-ats-${process.pid}.pdf`);
-    await renderToPdf("examples/alex-rivers/cv.html", pdf);
+    await render("examples/alex-rivers/cv.html", pdf);
     expect(existsSync(pdf)).toBe(true);
     const ats = analyzeAts(await extractPdfText(pdf), jd.data, 0.8);
     expect(ats.ok).toBe(true);

@@ -982,3 +982,174 @@ redefine the word STRONG.
 - Left alone deliberately, recorded for the owner: F2 (`untracedNumbers` matching on
   numeric value alone — see above), `verify/pack.ts`'s own tmp-then-rename (a fourth
   instance, outside criterion 3's three), and `corpus.test.ts`'s source-text greps.
+
+## Backlog 018: a renderer, an inspector, and testable inspection maths
+
+### Shape
+
+- `render/chrome.ts` was one file doing three jobs: printing a PDF, inspecting a
+  rendered document two different ways, and holding 160 lines of untyped
+  `String.raw` JavaScript that implemented the visibility maths. It is now:
+  - `render/renderer.ts` - "owns turning an HTML file into a PDF". Interface:
+    `render(html, pdf, { extraArgs })`. Chrome discovery, argument policy, spawn
+    and the wrote-nothing check are implementation, and none of them is exported.
+  - `render/inspector.ts` - "owns the answer to what the browser actually
+    painted". Interface: `inspect(html)` and `inspectAndPrint(html, pdf)`, plus
+    the evidence types.
+  - `render/inspection/{algorithms,source,cdp}.ts` - the inspector's
+    implementation: the pure maths, the script generated from it, and the one
+    transport.
+  - `render/chrome.ts` survives at 32 lines as what both modules share: where the
+    binary is (`findChrome`, plus `locateChrome(probe)` for the discovery tests)
+    and the flags every headless run uses. Keeping that name is why
+    `production.test.ts` needed no edit at all - it imports `findChrome` from
+    this path, and so do five other suites.
+
+### The maths is typed and checked against the standard, not against itself
+
+- `inspection/algorithms.ts` holds eleven functions and seven named constants over
+  plain numbers and strings: `parseCssColor`, `relativeLuminance`,
+  `contrastRatio`, `rectIntersects`, `paintedRects`, `concealsSubtree`,
+  `clipBoundsThrough`, `backdropBehind`, `isInkPainted`, `isLegibleAgainst`,
+  `normalizeWhitespace`. No DOM types appear in the module.
+- The clipping walk is the interesting one. The browser half now only *collects*
+  `{ style, rect }` for the element and each ancestor; the fold that narrows the
+  window and decides "clipped to nothing" is a pure function over that array. So
+  "a field clipped away by nested overflow boxes is invisible" is a Node test with
+  three hand-written rectangles, where before it was unreachable without Chrome.
+- The contrast cases assert published WCAG ratios, not this implementation's
+  output: 21:1 for black on white, 1:1 for white on white, 4.54:1 for #767676
+  (the darkest grey that clears AA on white), 3.03:1 for #949494, 3.95:1 for
+  #808080, 8.59:1 for blue, 4.0:1 for red. A wrong channel weight or a missing
+  linearisation kink fails these; it would not fail a snapshot of today's answers.
+  The sRGB weights and the sub-kink linear ramp are pinned separately.
+- Recorded because it reads like a bug and is not: the concealment floor is
+  `MINIMUM_LEGIBLE_CONTRAST = 1.1`, two orders of judgement below WCAG AA. This
+  gate asks "was this text hidden", not "is it comfortable to read", so a test
+  states directly that light grey on white is NOT concealed even though it fails
+  AA, and that #fefefe on white is.
+
+### The injected script is generated, and the generation is checked
+
+- `inspection/source.ts` emits `const <name> = <fn.toString()>;` for each
+  algorithm and constant, then the DOM-walk shell, wrapped in one IIFE so the page
+  sees only `window.__TAILORED_EVIDENCE__`.
+- Two things could break silently, so both are tested without a browser. First,
+  fidelity: the emitted algorithm text is evaluated with `new Function` and its
+  answers compared to the imported TypeScript ones over colour, clipping and
+  geometry cases. Second, drift: the shell is a string, so a toolchain that
+  renamed an exported function would leave it calling a name nothing defines, with
+  no symptom except a browser that never reports evidence. A test pins the eighteen
+  binding names and asserts the shell calls nothing outside them.
+- A third test asserts the shell contains none of the sRGB or contrast constants
+  and no `**`, which is what "the maths is no longer an untyped string" means
+  operationally.
+
+### One transport
+
+- The `--dump-dom` route, its base64 `<pre>` payload, the temp-directory copy with
+  an injected `<base href>`, and the `window.__TAILORED_CDP__` fork are deleted.
+  `inspect` and `inspectAndPrint` are now one CDP path that differs only in
+  whether `Page.printToPDF` is called.
+- That moves ip-guard from screen media to print media, so it was measured before
+  it was written. Screen and print inspection of the four real documents
+  (both bundled example artifacts, both fixture-pack artifacts) agree on every
+  `visible` flag, every text, tag and class. The only differences are the
+  `contextGroup` and `parentGroup` tokens on the example CV, uniformly one lower,
+  because the deleted instrumentation used to inject a `<base>` and a `<script>`
+  element into the document and those tokens are positions in
+  `querySelectorAll("*")`. Nothing can observe that: every rule compares two
+  tokens for equality, never their value. The oracle confirms it - ip-guard's
+  output on the example is byte-identical.
+- Print media is also the more honest medium, which is why it is the one that
+  survived: what a reader receives is the printed page, so a claim the print
+  stylesheet hides is hidden however well the screen shows it. Two of the new
+  browser tests assert exactly that, in both directions.
+
+### Evidence in domain terms
+
+- `RenderedDocumentEvidence` and its five companions are `DocumentEvidence`,
+  `SourceMarker`, `OwnerMarker`, `ClaimMarker`, `TextUnit`, `GeneratedContent`.
+- The CSS-selector fields are gone from the contract. `TextUnit.path` and
+  `GeneratedContent.path`+`pseudo` are one `locator: DebugLocator`, documented as
+  a debug aid that is never parsed. Merging the pseudo-element name into the
+  locator is what keeps claim-integrity's `generated-content` message
+  byte-identical: it used to concatenate the two itself.
+- No caller branches on a locator; all four uses interpolate one into a message.
+  The remaining structural fields on the markers (`tag`, `classes`, `parentTag`,
+  `metaGroup`, ...) are what ip-guard's grounded-date exemption checks - that a
+  canon-bound year sits in the right entry's meta line under the right owners -
+  and rewriting that rule is not this unit's scope. The group tokens are now
+  documented as opaque: compare two for equality, never read one.
+
+### Six injection points off the interface
+
+- `RenderOpts` is gone. `fetchImpl`, `webSocketFactory` and `handshakeTimeoutMs`
+  are default parameters of the three bounded-handshake primitives in
+  `inspection/cdp.ts`, where the timeout tests reach them directly.
+  `exists`, `platform` and `env` are the fields of `ChromeProbe`, the argument to
+  the pure `locateChrome`. `render`'s only option is `extraArgs`, which the CLI
+  actually uses.
+- Argument policy lost its exported builder with it. `buildChromeArgs` was public
+  only so a test could read it; the renderer's arguments are now checked where
+  they land, by pointing `CHROME_BIN` at a shell script that records its own
+  command line.
+
+### Verification
+
+- CLI oracle: 63 records over every command's `--help`, `--version`, an unknown
+  command, and real runs of every lane including all four Chrome-backed ones, at
+  merge base and at HEAD. 61 identical. The two that differ: `smoke` names the
+  base build's own staged example directory, and the fixture pack's
+  `receiptSha256` moves - which it also does between two runs of the SAME build,
+  because Chrome stamps a creation date into every PDF. The baseline was captured
+  twice to establish that before comparing.
+- Fixture receipt: `verify-pack` over `src/verify/fixtures/legacy-pack` - 18
+  findings, same IDs, severities, `ok` flags, messages and order, same
+  `ready-for-human` state, both staged HTML files byte-identical.
+- The nine ip-guard and claim-integrity invocations in the oracle are
+  byte-identical including their failure cases, among them a white-on-white claim
+  that must be reported hidden (exit 1, same messages).
+- `npm test`: 594 passed, 1 skipped, 61 files, with real Chrome. Same single skip
+  as the merge base (the real-vault field case). Was 516 passed / 54 files.
+  `production.test.ts` is untouched and ran green. `npm run lint:self` clean.
+- `inspectAndPrintDocument` had no direct test; `inspectAndPrint` now has three,
+  including one that reads the PDF's text layer with pdftotext to prove the
+  printed artifact is the revision that was inspected.
+- Cross-repo field test: `npm pack`, installed into a scratch copy of the
+  downstream vault (read from, never written to). The FULL battery -
+  `bash scripts/battery.sh --vault tests/practice-vault`, not just its text phase -
+  reports `BATTERY GREEN (20 gates)`, which includes `ipguard-cv` driving the new
+  inspector and both `render-pdf-*` lanes driving the new renderer.
+  `python3 tests/test_gates.py` reports 46 tests OK.
+
+### Deviation: diff budget
+
+- The budget was 12 production files and 600 new production lines. Files: 11.
+  Added production lines: 776, against 492 deleted, so +284 net. The overage is
+  relocation the metric cannot see: `chrome.ts` sheds 468 lines and 149 of them
+  reappear verbatim as `inspection/cdp.ts` while about 150 more are the injected
+  script moving into `inspection/source.ts`. Git's own copy detection does not
+  reattribute them (`-C40% --find-copies-harder` reports the same 776), so the
+  figure is stated as measured rather than argued down. A strip pass found nothing
+  speculative to remove: the genuinely new code is `algorithms.ts` (152 lines,
+  replacing untyped blob maths) and the per-field documentation criterion 2 asks
+  for on the evidence types. The budget was not raised.
+
+### Deviation: two files outside the stated allowed paths
+
+- The scope contract named `claimIntegrity.ts` for call-site updates but not
+  `ipGuard.ts` or `prohibitedClaims.ts`, which also import from `render/chrome.ts`.
+  Both were updated the same way and no further: three lines in `ipGuard.ts`
+  (import, one type annotation, one call renamed to `inspect`) and six type-name
+  references in `prohibitedClaims.ts`. No rule in either file changed.
+
+### Deferred, deliberately
+
+- Per the unit: docs generated from the registry (card 5), the fat `GateInput` and
+  duplicated `packResults`, `gate.ts` re-deriving commander's option-name rule,
+  `pack.ts`'s own tmp-then-rename.
+- Recorded for the owner, found while reading: `render <missing file>` exits 0 and
+  writes a PDF of Chrome's error page. It predates this unit and the oracle pins
+  the behaviour at both ends; changing it is a verdict change, so it was left
+  alone.
