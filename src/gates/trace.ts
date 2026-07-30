@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { canonCorpus } from "../canon/corpus.js";
 import { loadCanon } from "../canon/load.js";
 import { GateInputError, type Gate } from "./gate.js";
 import { htmlToText } from "./text.js";
@@ -92,22 +93,6 @@ export function checkNamesAndDates(entries: TitledEntry[], projectNames: string[
     if (!canon.projects.some((p) => eq(p.name, name))) issues.push({ kind: "unknown-name", detail: name });
   }
   return issues;
-}
-
-/** Every fact-bearing text field in the canon, joined into one corpus a claim can trace to. */
-export function canonCorpus(canon: Canon): string {
-  const parts: string[] = [
-    canon.identity.name, canon.identity.role, canon.summary ?? "",
-    // A header phone's digit groups are numeric claims; omit these and a real
-    // phone number reds the gate as untraced.
-    canon.identity.phone ?? "", canon.identity.email ?? "", canon.identity.location ?? "",
-  ];
-  for (const s of canon.skills) parts.push(s.label, s.value);
-  for (const p of canon.projects) parts.push(p.name, p.tagline ?? "", ...p.bullets);
-  for (const e of canon.experience) parts.push(e.title, e.org, e.start, e.end, ...e.bullets);
-  for (const ed of canon.education) parts.push(ed.qualification, ed.institution, ed.year, ed.result ?? "", ed.note ?? "");
-  parts.push(...canon.certifications, ...canon.publications);
-  return parts.join(" ");
 }
 
 export interface TraceResult { ok: boolean; untracedNumbers: NumericClaim[]; nameIssues: NameOrDateIssue[]; structuralIssues: string[]; }

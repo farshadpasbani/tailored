@@ -58,6 +58,21 @@ describe("migrate-canon CLI", () => {
     expect(() => readFileSync(output, "utf8")).toThrow();
   });
 
+  // The receipt path refuses to overwrite; the migrate paths must keep replacing, which is
+  // the difference the one atomic-write helper carries as its `exclusive` option.
+  it("replaces an existing output rather than refusing it", () => {
+    const source = join(fixtureDir, "replace-source.yaml");
+    const output = join(fixtureDir, "replace-output.yaml");
+    writeFileSync(source, "identity:\n  name: Alex Rivers\n  role: AI Engineer\n");
+    writeFileSync(output, "stale: true\n");
+
+    const result = spawnSync(process.execPath, ["dist/cli.js", "migrate-canon", source, output], { cwd: root, encoding: "utf8" });
+
+    expect(result.status).toBe(0);
+    expect(readFileSync(output, "utf8")).not.toMatch(/stale/);
+    expect((yaml.load(readFileSync(output, "utf8")) as { schemaVersion: number }).schemaVersion).toBe(2);
+  });
+
   it("fails cleanly for a missing input", () => {
     const result = spawnSync(process.execPath, ["dist/cli.js", "migrate-canon", join(fixtureDir, "missing.yaml")], { cwd: root, encoding: "utf8" });
     expect(result.status).toBe(1);
